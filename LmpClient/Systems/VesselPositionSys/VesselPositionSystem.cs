@@ -38,7 +38,8 @@ namespace LmpClient.Systems.VesselPositionSys
 
         public PositionEvents PositionEvents { get; } = new PositionEvents();
 
-        public bool PositionUpdateSystemBasicReady => Enabled && PositionUpdateSystemReady || HighLogic.LoadedScene == GameScenes.TRACKSTATION;
+        public bool PositionUpdateSystemBasicReady =>
+            Enabled && (PositionUpdateSystemReady || HighLogic.LoadedScene == GameScenes.TRACKSTATION);
 
         public static ConcurrentDictionary<Guid, VesselPositionUpdate> CurrentVesselUpdate { get; } =
             new ConcurrentDictionary<Guid, VesselPositionUpdate>();

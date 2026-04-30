@@ -28,20 +28,23 @@ namespace LmpClient.Systems.VesselPositionSys
         /// Avoid checking it unless is really needed as it uses reflection that's slow</param>
         public void SendVesselPositionUpdate(Vessel vessel, bool doOrbitDriverReadyCheck = false)
         {
-            if (vessel == null) return;
+            if (vessel == null)
+                return;
 
             if (doOrbitDriverReadyCheck && !vessel.orbitDriver.Ready())
             {
                 //Orbit driver is not ready so wait max 10 frames until it's ready
-                CoroutineUtil.StartConditionRoutine("SendVesselPositionUpdate",
+                CoroutineUtil.StartConditionRoutine(
+                    "SendVesselPositionUpdate",
                     () => SendVesselPositionUpdate(vessel),
-                    () => vessel.orbitDriver.Ready(), 10);
-
+                    () => vessel.orbitDriver.Ready(),
+                    10);
             }
             else
             {
                 var msg = CreateMessageFromVessel(vessel);
-                if (msg == null) return;
+                if (msg == null)
+                    return;
 
                 SendMessage(msg);
             }
@@ -49,17 +52,19 @@ namespace LmpClient.Systems.VesselPositionSys
 
         public static VesselPositionMsgData CreateMessageFromVessel(Vessel vessel)
         {
-            if (!OrbitParametersAreOk(vessel)) return null;
+            if (vessel == null || !OrbitParametersAreOk(vessel))
+                return null;
 
             var msgData = MessageFactory.CreateNewMessageData<VesselPositionMsgData>();
             msgData.PingSec = NetworkStatistics.PingSec;
             msgData.SubspaceId = WarpSystem.Singleton.CurrentSubspace;
             msgData.GameTime = TimeSyncSystem.UniversalTime;
+
             try
             {
                 msgData.VesselId = vessel.id;
-                msgData.BodyName = vessel.mainBody.bodyName;
-                msgData.BodyIndex = vessel.mainBody.flightGlobalsIndex;
+                msgData.BodyName = vessel.mainBody?.bodyName ?? string.Empty;
+                msgData.BodyIndex = vessel.mainBody != null ? vessel.mainBody.flightGlobalsIndex : 0;
                 msgData.Landed = vessel.Landed;
                 msgData.Splashed = vessel.Splashed;
 
@@ -71,9 +76,8 @@ namespace LmpClient.Systems.VesselPositionSys
 
                 msgData.HeightFromTerrain = vessel.heightFromTerrain;
 
-                if (MainSystem.BodiesGees.TryGetValue(vessel.mainBody, out var bodyGee))
-                    msgData.HackingGravity = Math.Abs(bodyGee - vessel.mainBody.GeeASL) > 0.0001;
-                msgData.HackingGravity = false;
+                msgData.HackingGravity = MainSystem.BodiesGees.TryGetValue(vessel.mainBody, out var bodyGee) &&
+                                         Math.Abs(bodyGee - vessel.mainBody.GeeASL) > 0.0001;
 
                 return msgData;
             }
@@ -132,20 +136,25 @@ namespace LmpClient.Systems.VesselPositionSys
         #endregion
 
         /// <summary>
-        /// Checks if the vessel contains NaN in any orbit parameter
+        /// Checks if the vessel contains invalid orbit parameters.
         /// </summary>
         private static bool OrbitParametersAreOk(Vessel vessel)
         {
-            var orbitParamsAreNan = double.IsNaN(vessel.orbit.inclination) ||
-                                    double.IsNaN(vessel.orbit.eccentricity) ||
-                                    double.IsNaN(vessel.orbit.semiMajorAxis) ||
-                                    double.IsNaN(vessel.orbit.LAN) ||
-                                    double.IsNaN(vessel.orbit.argumentOfPeriapsis) ||
-                                    double.IsNaN(vessel.orbit.meanAnomalyAtEpoch) ||
-                                    double.IsNaN(vessel.orbit.epoch) ||
-                                    double.IsNaN(vessel.orbit.referenceBody.flightGlobalsIndex);
+            if (vessel == null || vessel.orbit == null || vessel.orbit.referenceBody == null)
+                return false;
 
-            return !orbitParamsAreNan;
+            return IsValidDouble(vessel.orbit.inclination) &&
+                   IsValidDouble(vessel.orbit.eccentricity) &&
+                   IsValidDouble(vessel.orbit.semiMajorAxis) &&
+                   IsValidDouble(vessel.orbit.LAN) &&
+                   IsValidDouble(vessel.orbit.argumentOfPeriapsis) &&
+                   IsValidDouble(vessel.orbit.meanAnomalyAtEpoch) &&
+                   IsValidDouble(vessel.orbit.epoch);
+        }
+
+        private static bool IsValidDouble(double value)
+        {
+            return !double.IsNaN(value) && !double.IsInfinity(value);
         }
     }
 }

@@ -20,6 +20,9 @@ namespace LmpClient.Systems.VesselResourceSys
 
         public void SendVesselResources(Vessel vessel)
         {
+            if (vessel == null || vessel.protoVessel == null || vessel.protoVessel.protoPartSnapshots == null)
+                return;
+
             var resourceCount = 0;
 
             var msgData = NetworkMain.CliMsgFactory.CreateNewMessageData<VesselResourceMsgData>();
@@ -28,17 +31,20 @@ namespace LmpClient.Systems.VesselResourceSys
 
             for (var i = 0; i < vessel.protoVessel.protoPartSnapshots.Count; i++)
             {
-                if (vessel.protoVessel.protoPartSnapshots[i]?.resources == null) continue;
+                var partSnapshot = vessel.protoVessel.protoPartSnapshots[i];
+                if (partSnapshot?.resources == null)
+                    continue;
 
-                for (var j = 0; j < vessel.protoVessel.protoPartSnapshots[i].resources.Count; j++)
+                for (var j = 0; j < partSnapshot.resources.Count; j++)
                 {
-                    var resource = vessel.protoVessel.protoPartSnapshots[i].resources[j]?.resourceRef;
-                    if (resource == null) continue;
+                    var resource = partSnapshot.resources[j]?.resourceRef;
+                    if (resource == null)
+                        continue;
 
                     if (Resources.Count > resourceCount)
                     {
-                        Resources[resourceCount].ResourceName = resource.resourceName;
-                        Resources[resourceCount].PartFlightId = vessel.protoVessel.protoPartSnapshots[i].flightID;
+                        Resources[resourceCount].ResourceName = resource.resourceName ?? string.Empty;
+                        Resources[resourceCount].PartFlightId = partSnapshot.flightID;
                         Resources[resourceCount].Amount = resource.amount;
                         Resources[resourceCount].FlowState = resource.flowState;
                     }
@@ -46,8 +52,8 @@ namespace LmpClient.Systems.VesselResourceSys
                     {
                         Resources.Add(new VesselResourceInfo
                         {
-                            ResourceName = resource.resourceName,
-                            PartFlightId = vessel.protoVessel.protoPartSnapshots[i].flightID,
+                            ResourceName = resource.resourceName ?? string.Empty,
+                            PartFlightId = partSnapshot.flightID,
                             Amount = resource.amount,
                             FlowState = resource.flowState
                         });

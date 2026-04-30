@@ -13,30 +13,29 @@ namespace LmpClient.Systems.VesselFlightStateSys
 
         public void HandleMessage(IServerMessageBase msg)
         {
-            if (!(msg.Data is VesselFlightStateMsgData msgData)) return;
+            if (!(msg.Data is VesselFlightStateMsgData msgData))
+                return;
 
             var vesselId = msgData.VesselId;
             if (!VesselCommon.DoVesselChecks(vesselId))
                 return;
 
-            //System is not ready nor in use so just skip the message
+            // System is not ready nor in use so just skip the message.
             if (!System.FlightStateSystemReady)
                 return;
 
-            //We are not close (unpacked range) to this vessel so ignore the message
+            // We are not close enough/unpacked range to this vessel, so ignore the message.
             if (!System.FlyByWireDictionary.ContainsKey(vesselId))
                 return;
 
-            if (!VesselFlightStateSystem.CurrentFlightState.ContainsKey(vesselId))
+            if (VesselFlightStateSystem.CurrentFlightState.TryAdd(vesselId, new VesselFlightStateUpdate(msgData)))
             {
-                VesselFlightStateSystem.CurrentFlightState.TryAdd(vesselId, new VesselFlightStateUpdate(msgData));
                 VesselFlightStateSystem.TargetFlightStateQueue.TryAdd(vesselId, new FlightStateQueue());
+                return;
             }
-            else
-            {
-                VesselFlightStateSystem.TargetFlightStateQueue.TryGetValue(vesselId, out var queue);
-                queue?.Enqueue(msgData);
-            }
+
+            if (VesselFlightStateSystem.TargetFlightStateQueue.TryGetValue(vesselId, out var queue))
+                queue.Enqueue(msgData);
         }
     }
 }

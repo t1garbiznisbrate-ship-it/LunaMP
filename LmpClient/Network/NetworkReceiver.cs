@@ -72,54 +72,49 @@ namespace LmpClient.Network
 
                     if (NetworkMain.ClientConnection.ReadMessage(out var msg))
                     {
-                        switch (msg.MessageType)
+                        try
                         {
-                            case NetIncomingMessageType.DebugMessage:
-                                LunaLog.Log($"[Lidgren DEBUG] {msg.ReadString()}");
-                                break;
-                            case NetIncomingMessageType.VerboseDebugMessage:
-                                LunaLog.Log($"[Lidgren VERBOSE] {msg.ReadString()}");
-                                break;
-                            case NetIncomingMessageType.WarningMessage:
-                                LunaLog.Log($"[Lidgren WARNING] {msg.ReadString()}");
-                                break;
-                            case NetIncomingMessageType.NatIntroductionSuccess:
-                                NetworkServerList.HandleNatIntroductionSuccess(msg);
-                                break;
-                            case NetIncomingMessageType.UnconnectedData:
-                                NetworkServerList.HandleServersList(msg);
-                                break;
-                            case NetIncomingMessageType.ConnectionLatencyUpdated:
-                                NetworkStatistics.PingSec = msg.ReadFloat();
-                                break;
-                            case NetIncomingMessageType.Data:
-                                try
-                                {
-                                    var deserializedMsg = NetworkMain.SrvMsgFactory.Deserialize(msg, LunaNetworkTime.UtcNow.Ticks);
-                                    if (deserializedMsg != null)
+                            switch (msg.MessageType)
+                            {
+                                case NetIncomingMessageType.DebugMessage:
+                                    LunaLog.Log($"[Lidgren DEBUG] {msg.ReadString()}");
+                                    break;
+                                case NetIncomingMessageType.VerboseDebugMessage:
+                                    LunaLog.Log($"[Lidgren VERBOSE] {msg.ReadString()}");
+                                    break;
+                                case NetIncomingMessageType.WarningMessage:
+                                    LunaLog.Log($"[Lidgren WARNING] {msg.ReadString()}");
+                                    break;
+                                case NetIncomingMessageType.NatIntroductionSuccess:
+                                    NetworkServerList.HandleNatIntroductionSuccess(msg);
+                                    break;
+                                case NetIncomingMessageType.UnconnectedData:
+                                    NetworkServerList.HandleServersList(msg);
+                                    break;
+                                case NetIncomingMessageType.ConnectionLatencyUpdated:
+                                    NetworkStatistics.PingSec = msg.ReadFloat();
+                                    break;
+                                case NetIncomingMessageType.Data:
+                                    HandleDataMessage(msg);
+                                    break;
+                                case NetIncomingMessageType.StatusChanged:
+                                    switch ((NetConnectionStatus)msg.ReadByte())
                                     {
-                                        QueueMessageToSystem(deserializedMsg as IServerMessageBase);
+                                        case NetConnectionStatus.Disconnected:
+                                            var reason = msg.ReadString();
+                                            NetworkConnection.Disconnect(reason);
+                                            break;
                                     }
-                                }
-                                catch (Exception e)
-                                {
-                                    LunaLog.LogError($"[LMP]: Error deserializing message! {e}");
-                                }
-                                break;
-                            case NetIncomingMessageType.StatusChanged:
-                                switch ((NetConnectionStatus)msg.ReadByte())
-                                {
-                                    case NetConnectionStatus.Disconnected:
-                                        var reason = msg.ReadString();
-                                        NetworkConnection.Disconnect(reason);
-                                        break;
-                                }
-                                break;
-                            default:
-                                LunaLog.Log($"[LMP]: LIDGREN: {msg.MessageType} -- {msg.PeekString()}");
-                                break;
+                                    break;
+                                default:
+                                    LunaLog.Log($"[LMP]: LIDGREN: {msg.MessageType} -- {msg.PeekString()}");
+                                    break;
+                            }
                         }
-                        NetworkMain.ClientConnection.Recycle(msg);
+                        finally
+                        {
+                            NetworkMain.ClientConnection.Recycle(msg);
+                        }
                     }
                     else
                     {
@@ -132,7 +127,25 @@ namespace LmpClient.Network
                 LunaLog.LogError($"[LMP]: Receive thread error: {e}");
                 NetworkMain.HandleDisconnectException(e);
             }
+
             LunaLog.Log("[LMP]: Receive thread exited");
+        }
+
+        private static void HandleDataMessage(NetIncomingMessage msg)
+        {
+            IServerMessageBase deserializedMsg = null;
+
+            try
+            {
+                deserializedMsg = NetworkMain.SrvMsgFactory.Deserialize(msg, LunaNetworkTime.UtcNow.Ticks) as IServerMessageBase;
+                if (deserializedMsg != null)
+                    QueueMessageToSystem(deserializedMsg);
+            }
+            catch (Exception e)
+            {
+                deserializedMsg?.Recycle();
+                LunaLog.LogError($"[LMP]: Error deserializing or queueing message! {e}");
+            }
         }
 
         /// <summary>
@@ -140,6 +153,9 @@ namespace LmpClient.Network
         /// </summary>
         private static void QueueMessageToSystem(IServerMessageBase msg)
         {
+            if (msg == null || msg.Data == null)
+                return;
+
             switch (msg.MessageType)
             {
                 case ServerMessageType.Admin:
@@ -170,51 +186,7 @@ namespace LmpClient.Network
                     KerbalSystem.Singleton.EnqueueMessage(msg);
                     break;
                 case ServerMessageType.Vessel:
-                    switch (((VesselBaseMsgData)msg.Data).VesselMessageType)
-                    {
-                        case VesselMessageType.Position:
-                            VesselPositionSystem.Singleton.EnqueueMessage(msg);
-                            break;
-                        case VesselMessageType.Flightstate:
-                            VesselFlightStateSystem.Singleton.EnqueueMessage(msg);
-                            break;
-                        case VesselMessageType.Proto:
-                            VesselProtoSystem.Singleton.EnqueueMessage(msg);
-                            break;
-                        case VesselMessageType.Remove:
-                            VesselRemoveSystem.Singleton.EnqueueMessage(msg);
-                            break;
-                        case VesselMessageType.Update:
-                            VesselUpdateSystem.Singleton.EnqueueMessage(msg);
-                            break;
-                        case VesselMessageType.Resource:
-                            VesselResourceSystem.Singleton.EnqueueMessage(msg);
-                            break;
-                        case VesselMessageType.PartSyncField:
-                            VesselPartSyncFieldSystem.Singleton.EnqueueMessage(msg);
-                            break;
-                        case VesselMessageType.PartSyncUiField:
-                            VesselPartSyncUiFieldSystem.Singleton.EnqueueMessage(msg);
-                            break;
-                        case VesselMessageType.PartSyncCall:
-                            VesselPartSyncCallSystem.Singleton.EnqueueMessage(msg);
-                            break;
-                        case VesselMessageType.ActionGroup:
-                            VesselActionGroupSystem.Singleton.EnqueueMessage(msg);
-                            break;
-                        case VesselMessageType.Fairing:
-                            VesselFairingsSystem.Singleton.EnqueueMessage(msg);
-                            break;
-                        case VesselMessageType.Decouple:
-                            VesselDecoupleSystem.Singleton.EnqueueMessage(msg);
-                            break;
-                        case VesselMessageType.Couple:
-                            VesselCoupleSystem.Singleton.EnqueueMessage(msg);
-                            break;
-                        case VesselMessageType.Undock:
-                            VesselUndockSystem.Singleton.EnqueueMessage(msg);
-                            break;
-                    }
+                    QueueVesselMessageToSystem(msg);
                     break;
                 case ServerMessageType.CraftLibrary:
                     CraftLibrarySystem.Singleton.EnqueueMessage(msg);
@@ -241,48 +213,123 @@ namespace LmpClient.Network
                     FacilitySystem.Singleton.EnqueueMessage(msg);
                     break;
                 case ServerMessageType.ShareProgress:
-                    switch (((ShareProgressBaseMsgData)msg.Data).ShareProgressMessageType)
-                    {
-                        case ShareProgressMessageType.FundsUpdate:
-                            ShareFundsSystem.Singleton.EnqueueMessage(msg);
-                            break;
-                        case ShareProgressMessageType.ScienceUpdate:
-                            ShareScienceSystem.Singleton.EnqueueMessage(msg);
-                            break;
-                        case ShareProgressMessageType.ScienceSubjectUpdate:
-                            ShareScienceSubjectSystem.Singleton.EnqueueMessage(msg);
-                            break;
-                        case ShareProgressMessageType.ReputationUpdate:
-                            ShareReputationSystem.Singleton.EnqueueMessage(msg);
-                            break;
-                        case ShareProgressMessageType.TechnologyUpdate:
-                            ShareTechnologySystem.Singleton.EnqueueMessage(msg);
-                            break;
-                        case ShareProgressMessageType.ContractsUpdate:
-                            ShareContractsSystem.Singleton.EnqueueMessage(msg);
-                            break;
-                        case ShareProgressMessageType.AchievementsUpdate:
-                            ShareAchievementsSystem.Singleton.EnqueueMessage(msg);
-                            break;
-                        case ShareProgressMessageType.StrategyUpdate:
-                            ShareStrategySystem.Singleton.EnqueueMessage(msg);
-                            break;
-                        case ShareProgressMessageType.FacilityUpgrade:
-                            ShareUpgradeableFacilitiesSystem.Singleton.EnqueueMessage(msg);
-                            break;
-                        case ShareProgressMessageType.PartPurchase:
-                            SharePurchasePartsSystem.Singleton.EnqueueMessage(msg);
-                            break;
-                        case ShareProgressMessageType.ExperimentalPart:
-                            ShareExperimentalPartsSystem.Singleton.EnqueueMessage(msg);
-                            break;
-                    }
+                    QueueShareProgressMessageToSystem(msg);
                     break;
                 case ServerMessageType.Screenshot:
                     ScreenshotSystem.Singleton.EnqueueMessage(msg);
                     break;
                 default:
                     LunaLog.LogError($"[LMP]: Unhandled Message type {msg.MessageType}");
+                    msg.Recycle();
+                    break;
+            }
+        }
+
+        private static void QueueVesselMessageToSystem(IServerMessageBase msg)
+        {
+            if (!(msg.Data is VesselBaseMsgData vesselData))
+            {
+                msg.Recycle();
+                return;
+            }
+
+            switch (vesselData.VesselMessageType)
+            {
+                case VesselMessageType.Position:
+                    VesselPositionSystem.Singleton.EnqueueMessage(msg);
+                    break;
+                case VesselMessageType.Flightstate:
+                    VesselFlightStateSystem.Singleton.EnqueueMessage(msg);
+                    break;
+                case VesselMessageType.Proto:
+                    VesselProtoSystem.Singleton.EnqueueMessage(msg);
+                    break;
+                case VesselMessageType.Remove:
+                    VesselRemoveSystem.Singleton.EnqueueMessage(msg);
+                    break;
+                case VesselMessageType.Update:
+                    VesselUpdateSystem.Singleton.EnqueueMessage(msg);
+                    break;
+                case VesselMessageType.Resource:
+                    VesselResourceSystem.Singleton.EnqueueMessage(msg);
+                    break;
+                case VesselMessageType.PartSyncField:
+                    VesselPartSyncFieldSystem.Singleton.EnqueueMessage(msg);
+                    break;
+                case VesselMessageType.PartSyncUiField:
+                    VesselPartSyncUiFieldSystem.Singleton.EnqueueMessage(msg);
+                    break;
+                case VesselMessageType.PartSyncCall:
+                    VesselPartSyncCallSystem.Singleton.EnqueueMessage(msg);
+                    break;
+                case VesselMessageType.ActionGroup:
+                    VesselActionGroupSystem.Singleton.EnqueueMessage(msg);
+                    break;
+                case VesselMessageType.Fairing:
+                    VesselFairingsSystem.Singleton.EnqueueMessage(msg);
+                    break;
+                case VesselMessageType.Decouple:
+                    VesselDecoupleSystem.Singleton.EnqueueMessage(msg);
+                    break;
+                case VesselMessageType.Couple:
+                    VesselCoupleSystem.Singleton.EnqueueMessage(msg);
+                    break;
+                case VesselMessageType.Undock:
+                    VesselUndockSystem.Singleton.EnqueueMessage(msg);
+                    break;
+                default:
+                    LunaLog.LogError($"[LMP]: Unhandled vessel message type {vesselData.VesselMessageType}");
+                    msg.Recycle();
+                    break;
+            }
+        }
+
+        private static void QueueShareProgressMessageToSystem(IServerMessageBase msg)
+        {
+            if (!(msg.Data is ShareProgressBaseMsgData shareData))
+            {
+                msg.Recycle();
+                return;
+            }
+
+            switch (shareData.ShareProgressMessageType)
+            {
+                case ShareProgressMessageType.FundsUpdate:
+                    ShareFundsSystem.Singleton.EnqueueMessage(msg);
+                    break;
+                case ShareProgressMessageType.ScienceUpdate:
+                    ShareScienceSystem.Singleton.EnqueueMessage(msg);
+                    break;
+                case ShareProgressMessageType.ScienceSubjectUpdate:
+                    ShareScienceSubjectSystem.Singleton.EnqueueMessage(msg);
+                    break;
+                case ShareProgressMessageType.ReputationUpdate:
+                    ShareReputationSystem.Singleton.EnqueueMessage(msg);
+                    break;
+                case ShareProgressMessageType.TechnologyUpdate:
+                    ShareTechnologySystem.Singleton.EnqueueMessage(msg);
+                    break;
+                case ShareProgressMessageType.ContractsUpdate:
+                    ShareContractsSystem.Singleton.EnqueueMessage(msg);
+                    break;
+                case ShareProgressMessageType.AchievementsUpdate:
+                    ShareAchievementsSystem.Singleton.EnqueueMessage(msg);
+                    break;
+                case ShareProgressMessageType.StrategyUpdate:
+                    ShareStrategySystem.Singleton.EnqueueMessage(msg);
+                    break;
+                case ShareProgressMessageType.FacilityUpgrade:
+                    ShareUpgradeableFacilitiesSystem.Singleton.EnqueueMessage(msg);
+                    break;
+                case ShareProgressMessageType.PartPurchase:
+                    SharePurchasePartsSystem.Singleton.EnqueueMessage(msg);
+                    break;
+                case ShareProgressMessageType.ExperimentalPart:
+                    ShareExperimentalPartsSystem.Singleton.EnqueueMessage(msg);
+                    break;
+                default:
+                    LunaLog.LogError($"[LMP]: Unhandled share progress message type {shareData.ShareProgressMessageType}");
+                    msg.Recycle();
                     break;
             }
         }

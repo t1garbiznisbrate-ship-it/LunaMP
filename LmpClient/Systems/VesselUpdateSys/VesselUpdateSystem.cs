@@ -45,6 +45,12 @@ namespace LmpClient.Systems.VesselUpdateSys
         protected override void OnDisabled()
         {
             base.OnDisabled();
+
+            foreach (var keyVal in VesselUpdates)
+            {
+                keyVal.Value.Clear();
+            }
+
             VesselUpdates.Clear();
         }
 

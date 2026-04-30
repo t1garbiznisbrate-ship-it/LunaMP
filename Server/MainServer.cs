@@ -20,6 +20,7 @@ using System.Diagnostics;
 using System.Globalization;
 using System.IO;
 using System.Reflection;
+using System.Runtime.Versioning;
 using System.Text;
 using System.Threading;
 using System.Threading.Tasks;
@@ -40,6 +41,7 @@ namespace Server
 
         private static bool IsRestart = false;
 
+        [SupportedOSPlatform("windows")]
         public static async Task Main()
         {
             //Verify the .NET runtime before anything else so we can give users a clear,

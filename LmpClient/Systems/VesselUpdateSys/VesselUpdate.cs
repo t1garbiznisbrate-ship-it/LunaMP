@@ -31,13 +31,15 @@ namespace LmpClient.Systems.VesselUpdateSys
         public bool WasControllable;
         public int Stage;
         public float[] Com = new float[3];
+        public string BodyName;
 
         #endregion
 
         public void ProcessVesselUpdate()
         {
             var vessel = FlightGlobals.FindVessel(VesselId);
-            if (vessel == null) return;
+            if (vessel == null)
+                return;
 
             if (!VesselCommon.DoVesselChecks(vessel.id))
                 return;
@@ -69,18 +71,24 @@ namespace LmpClient.Systems.VesselUpdateSys
 
         private void UpdateVesselFields(Vessel vessel)
         {
-            vessel.vesselName = Name;
-            vessel.vesselType = (VesselType)Enum.Parse(typeof(VesselType), Type);
+            vessel.vesselName = Name ?? string.Empty;
+
+            if (TryParseVesselType(Type, out var vesselType))
+                vessel.vesselType = vesselType;
+
             vessel.distanceTraveled = DistanceTraveled;
 
-            vessel.protoVessel.situation = (Vessel.Situations)Enum.Parse(typeof(Vessel.Situations), Situation);
+            if (TryParseSituation(Situation, out var vesselSituation))
+            {
+                vessel.protoVessel.situation = vesselSituation;
+                vessel.situation = vesselSituation;
+            }
 
-            vessel.situation = (Vessel.Situations)Enum.Parse(typeof(Vessel.Situations), Situation);
             vessel.Landed = Landed;
             vessel.Splashed = Splashed;
 
-            vessel.landedAt = LandedAt;
-            vessel.displaylandedAt = DisplayLandedAt;
+            vessel.landedAt = LandedAt ?? string.Empty;
+            vessel.displaylandedAt = DisplayLandedAt ?? string.Empty;
 
             vessel.missionTime = MissionTime;
             vessel.launchTime = LaunchTime;
@@ -98,7 +106,7 @@ namespace LmpClient.Systems.VesselUpdateSys
 
             if (AutoClean)
             {
-                vessel.SetAutoClean(AutoCleanReason);
+                vessel.SetAutoClean(AutoCleanReason ?? string.Empty);
             }
 
             //vessel.IsControllable = msgData.WasControllable;
@@ -127,20 +135,27 @@ namespace LmpClient.Systems.VesselUpdateSys
 
         private void UpdateProtoVesselValues(ProtoVessel protoVessel)
         {
-            if (protoVessel == null) return;
+            if (protoVessel == null)
+                return;
 
             // Determine whether this protoVessel belongs to the active vessel so we
             // can skip the referenceTransform override (same reasoning as UpdateVesselFields).
             var isActive = FlightGlobals.ActiveVessel != null
                 && FlightGlobals.ActiveVessel.protoVessel == protoVessel;
 
-            protoVessel.vesselName = Name;
-            protoVessel.vesselType = (VesselType)Enum.Parse(typeof(VesselType), Type);
+            protoVessel.vesselName = Name ?? string.Empty;
+
+            if (TryParseVesselType(Type, out var vesselType))
+                protoVessel.vesselType = vesselType;
+
             protoVessel.distanceTraveled = DistanceTraveled;
-            protoVessel.situation = (Vessel.Situations)Enum.Parse(typeof(Vessel.Situations), Situation);
+
+            if (TryParseSituation(Situation, out var vesselSituation))
+                protoVessel.situation = vesselSituation;
+
             protoVessel.landed = Landed;
-            protoVessel.landedAt = LandedAt;
-            protoVessel.displaylandedAt = DisplayLandedAt;
+            protoVessel.landedAt = LandedAt ?? string.Empty;
+            protoVessel.displaylandedAt = DisplayLandedAt ?? string.Empty;
             protoVessel.splashed = Splashed;
             protoVessel.missionTime = MissionTime;
             protoVessel.launchTime = LaunchTime;
@@ -149,13 +164,24 @@ namespace LmpClient.Systems.VesselUpdateSys
 
             if (!isActive)
                 protoVessel.refTransform = RefTransformId;
+
             protoVessel.autoClean = AutoClean;
-            protoVessel.autoCleanReason = AutoCleanReason;
+            protoVessel.autoCleanReason = AutoCleanReason ?? string.Empty;
             protoVessel.wasControllable = WasControllable;
             protoVessel.stage = Stage;
             protoVessel.CoM.x = Com[0];
             protoVessel.CoM.y = Com[1];
             protoVessel.CoM.z = Com[2];
+        }
+
+        private static bool TryParseVesselType(string value, out VesselType vesselType)
+        {
+            return Enum.TryParse(value, true, out vesselType);
+        }
+
+        private static bool TryParseSituation(string value, out Vessel.Situations situation)
+        {
+            return Enum.TryParse(value, true, out situation);
         }
     }
 }

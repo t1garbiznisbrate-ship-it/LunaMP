@@ -21,10 +21,10 @@ namespace LmpClient.Base
         /// <summary>
         /// Routine name is the name of the method it runs
         /// </summary>
-        public string Name => Method.Method.Name;
+        public string Name => Method?.Method.Name ?? MethodName ?? "UnknownRoutine";
 
         /// <summary>
-        /// Interval in ms at witch this routine will be executed. Set it to 0 if you want to run it on every update/fixed update
+        /// Interval in ms at which this routine will be executed. Set it to 0 if you want to run it on every update/fixed update.
         /// </summary>
         public int IntervalInMs { get; set; }
 
@@ -48,11 +48,13 @@ namespace LmpClient.Base
         private RoutineDefinition() => _stopwatch.Start();
 
         /// <summary>
-        /// Create a routine definition. Set the interval to 0 if you want to execute it on every update/fixed update
-        /// Set the runOnce to true if you want to run the routine only 1 time
+        /// Create a routine definition. Set the interval to 0 if you want to execute it on every update/fixed update.
         /// </summary>
         public RoutineDefinition(int intervalInMs, RoutineExecution execution, Action method) : this()
         {
+            if (method == null)
+                throw new ArgumentNullException(nameof(method));
+
             IntervalInMs = intervalInMs;
             Execution = execution;
             Method = method;
@@ -62,16 +64,21 @@ namespace LmpClient.Base
         #endregion
 
         /// <summary>
-        /// Call this method to try to run the routine if the interval is ok
+        /// Call this method to try to run the routine if the interval is ok.
         /// </summary>
         public void RunRoutine()
         {
-            if (IntervalInMs <= 0 || _stopwatch.ElapsedMilliseconds > IntervalInMs)
+            if (IntervalInMs > 0 && _stopwatch.ElapsedMilliseconds <= IntervalInMs)
+                return;
+
+            Profiler.BeginSample(MethodName);
+
+            try
             {
-                Profiler.BeginSample(MethodName);
-
                 Method.Invoke();
-
+            }
+            finally
+            {
                 _stopwatch.Reset();
                 _stopwatch.Start();
 

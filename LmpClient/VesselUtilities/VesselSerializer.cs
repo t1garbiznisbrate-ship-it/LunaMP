@@ -13,10 +13,21 @@ namespace LmpClient.VesselUtilities
         {
             try
             {
-                var vesselNode = data.DeserializeToConfigNode(numBytes);
-                var configGuid = vesselNode?.GetValue("pid");
+                if (data == null || numBytes <= 0 || numBytes > data.Length)
+                    return null;
 
-                return CreateSafeProtoVesselFromConfigNode(vesselNode, new Guid(configGuid));
+                var vesselNode = data.DeserializeToConfigNode(numBytes);
+                if (vesselNode == null)
+                    return null;
+
+                var configGuid = vesselNode.GetValue("pid");
+                if (!Guid.TryParse(configGuid, out var vesselId))
+                {
+                    LunaLog.LogError($"[LMP]: Error while deserializing vessel: invalid vessel pid '{configGuid}'");
+                    return null;
+                }
+
+                return CreateSafeProtoVesselFromConfigNode(vesselNode, vesselId);
             }
             catch (Exception e)
             {
@@ -38,13 +49,17 @@ namespace LmpClient.VesselUtilities
         /// </summary>
         public static void SerializeVesselToArray(ProtoVessel protoVessel, byte[] data, out int numBytes)
         {
+            numBytes = 0;
+
+            if (data == null || data.Length == 0)
+            {
+                LunaLog.LogError("[LMP]: Cannot serialize vessel to a null or empty byte array");
+                return;
+            }
+
             if (PreSerializationChecks(protoVessel, out var configNode))
             {
                 configNode.SerializeToArray(data, out numBytes);
-            }
-            else
-            {
-                numBytes = 0;
             }
         }
 
@@ -55,12 +70,15 @@ namespace LmpClient.VesselUtilities
         {
             try
             {
-                //Cannot create a protovessel if HighLogic.CurrentGame is null as we don't have a CrewRoster
-                //and the protopartsnapshot constructor needs it
+                if (inputNode == null)
+                    return null;
+
+                // Cannot create a protovessel if HighLogic.CurrentGame is null as we don't have a CrewRoster
+                // and the protopartsnapshot constructor needs it.
                 if (HighLogic.CurrentGame == null)
                     return null;
 
-                //Cannot reuse the Protovessel to save memory garbage as it does not have any clear method :(
+                // Cannot reuse the Protovessel to save memory garbage as it does not have any clear method.
                 return new ProtoVessel(inputNode, HighLogic.CurrentGame);
             }
             catch (Exception e)
@@ -92,9 +110,14 @@ namespace LmpClient.VesselUtilities
                 return false;
             }
 
-            var vesselId = new Guid(configNode.GetValue("pid"));
+            var vesselPid = configNode.GetValue("pid");
+            if (!Guid.TryParse(vesselPid, out var vesselId))
+            {
+                LunaLog.LogError($"[LMP]: Cannot serialize vessel with invalid pid '{vesselPid}'");
+                return false;
+            }
 
-            //Defend against NaN orbits
+            // Defend against NaN orbits.
             if (configNode.VesselHasNaNPosition())
             {
                 LunaLog.LogError($"[LMP]: Vessel {vesselId} has NaN position");

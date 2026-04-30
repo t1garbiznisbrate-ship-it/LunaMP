@@ -50,6 +50,7 @@ namespace LmpClient.Network
             {
                 LunaLog.LogError($"[LMP]: Send thread error: {e}");
             }
+
             LunaLog.Log("[LMP]: Send thread exited");
         }
 
@@ -58,6 +59,9 @@ namespace LmpClient.Network
         /// </summary>
         public static void QueueOutgoingMessage(IMessageBase message)
         {
+            if (message == null)
+                return;
+
             OutgoingMessages.Enqueue(message);
         }
 
@@ -67,9 +71,19 @@ namespace LmpClient.Network
         /// </summary>
         private static bool SendNetworkMessage(IMessageBase message)
         {
-            message.Data.SentTime = LunaNetworkTime.UtcNow.Ticks;
+            if (message == null)
+                return false;
+
             try
             {
+                if (message.Data == null)
+                {
+                    message.Recycle();
+                    return false;
+                }
+
+                message.Data.SentTime = LunaNetworkTime.UtcNow.Ticks;
+
                 if (message is IMasterServerMessageBase)
                 {
                     if (NetworkMain.ClientConnection.Status == NetPeerStatus.NotRunning)
@@ -77,39 +91,44 @@ namespace LmpClient.Network
                         LunaLog.Log("Starting client to send unconnected message");
                         NetworkMain.ClientConnection.Start();
                     }
+
                     while (NetworkMain.ClientConnection.Status != NetPeerStatus.Running)
                     {
                         LunaLog.Log("Waiting for client to start up to send unconnected message");
-                        // Still trying to start up
                         Thread.Sleep(50);
                     }
 
                     IPEndPoint[] masterServers;
                     if (string.IsNullOrEmpty(SettingsSystem.CurrentSettings.CustomMasterServer))
+                    {
                         masterServers = MasterServerRetriever.MasterServers.GetValues;
+                    }
                     else
                     {
                         masterServers = new[]
                         {
                             LunaNetUtils.CreateEndpointFromString(SettingsSystem.CurrentSettings.CustomMasterServer)
                         };
-
                     }
+
                     foreach (var masterServer in masterServers)
                     {
-                        // Don't reuse lidgren messages, it does that on it's own
+                        // Don't reuse lidgren messages, it does that on its own.
                         var lidgrenMsg = NetworkMain.ClientConnection.CreateMessage(message.GetMessageSize());
 
                         message.Serialize(lidgrenMsg);
                         NetworkMain.ClientConnection.SendUnconnectedMessage(lidgrenMsg, masterServer);
                     }
+
                     message.Recycle();
                     return true;
                 }
 
-                if (NetworkMain.ClientConnection == null || NetworkMain.ClientConnection.Status == NetPeerStatus.NotRunning
-                    || MainSystem.NetworkState < ClientState.Connected)
+                if (NetworkMain.ClientConnection == null ||
+                    NetworkMain.ClientConnection.Status == NetPeerStatus.NotRunning ||
+                    MainSystem.NetworkState < ClientState.Connected)
                 {
+                    message.Recycle();
                     return false;
                 }
 
@@ -123,6 +142,7 @@ namespace LmpClient.Network
             }
             catch (Exception e)
             {
+                message.Recycle();
                 NetworkMain.HandleDisconnectException(e);
                 return false;
             }

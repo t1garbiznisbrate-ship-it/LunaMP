@@ -1,4 +1,5 @@
 ﻿using System;
+using System.Runtime.Versioning;
 using LmpCommon.Message.Data.Screenshot;
 using LmpCommon.Message.Interface;
 using LmpCommon.Message.Types;
@@ -10,6 +11,7 @@ namespace Server.Message
 {
     public class ScreenshotMsgReader : ReaderBase
     {
+        [SupportedOSPlatform("windows")]
         public override void HandleMessage(ClientStructure client, IClientMessageBase message)
         {
             var data = (ScreenshotBaseMsgData)message.Data;

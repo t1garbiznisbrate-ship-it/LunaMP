@@ -15,6 +15,9 @@ namespace Server.Client
     {
         public static void ConnectClient(NetConnection newClientConnection)
         {
+            if (newClientConnection == null)
+                return;
+
             var newClientObject = new ClientStructure(newClientConnection);
 
             LmpPluginHandler.FireOnClientConnect(newClientObject);
@@ -25,13 +28,15 @@ namespace Server.Client
 
         public static void DisconnectClient(ClientStructure client, string reason = "")
         {
+            if (client == null)
+                return;
+
             if (!string.IsNullOrEmpty(reason))
                 LunaLog.Debug($"{client.PlayerName} sent Connection end message, reason: {reason}");
 
-            //Remove Clients from list
-            if (ServerContext.Clients.ContainsKey(client.Endpoint))
+            if (ServerContext.Clients.TryRemove(client.Endpoint, out var removedClient))
             {
-                ServerContext.Clients.TryRemove(client.Endpoint, out client);
+                client = removedClient;
                 LunaLog.Debug($"Online Players: {ServerContext.PlayerCount}, connected: {ServerContext.Clients.Count}");
             }
 
@@ -39,10 +44,11 @@ namespace Server.Client
             {
                 client.ConnectionStatus = ConnectionStatus.Disconnected;
                 LmpPluginHandler.FireOnClientDisconnect(client);
+
                 if (client.Authenticated)
                 {
                     var msgData = ServerContext.ServerMessageFactory.CreateNewMessageData<PlayerConnectionLeaveMsgData>();
-                    msgData.PlayerName = client.PlayerName;
+                    msgData.PlayerName = client.PlayerName ?? string.Empty;
 
                     MessageQueuer.RelayMessage<PlayerConnectionSrvMsg>(client, msgData);
                     LockSystem.ReleasePlayerLocks(client);
@@ -59,7 +65,12 @@ namespace Server.Client
                 }
             }
 
-            //As this is the last client that is connected to the server, run a safety backup once they disconnect
+            while (client.SendMessageQueue.TryDequeue(out var message))
+            {
+                message?.Recycle();
+            }
+
+            // As this is the last client connected to the server, run a safety backup once they disconnect.
             if (ServerContext.Clients.Count == 0)
             {
                 BackupSystem.RunBackup();

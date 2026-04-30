@@ -6,6 +6,7 @@ using LmpClient.Systems.Warp;
 using LmpCommon.Message.Client;
 using LmpCommon.Message.Data.Vessel;
 using LmpCommon.Message.Interface;
+using LmpCommon.Time;
 using System;
 
 namespace LmpClient.Systems.VesselFlightStateSys
@@ -24,11 +25,18 @@ namespace LmpClient.Systems.VesselFlightStateSys
 
         public void SendCurrentFlightState()
         {
-            var flightState = new FlightCtrlState();
-            flightState.CopyFrom(FlightGlobals.ActiveVessel.ctrlState);
+            var activeVessel = FlightGlobals.ActiveVessel;
+            if (activeVessel == null || activeVessel.ctrlState == null)
+                return;
 
-            var vesselId = FlightGlobals.ActiveVessel.id;
-            var forceResync = vesselId != _lastSentVesselId || (DateTime.UtcNow - _lastFlightStateSentAt).TotalMilliseconds >= ForceResyncIntervalMs;
+            var flightState = new FlightCtrlState();
+            flightState.CopyFrom(activeVessel.ctrlState);
+
+            var now = LunaComputerTime.UtcNow;
+            var vesselId = activeVessel.id;
+            var forceResync = vesselId != _lastSentVesselId ||
+                              (now - _lastFlightStateSentAt).TotalMilliseconds >= ForceResyncIntervalMs;
+
             if (!forceResync && FlightStatesAreEquivalent(flightState, LastSentFlightState))
                 return;
 
@@ -62,7 +70,7 @@ namespace LmpClient.Systems.VesselFlightStateSys
 
             LastSentFlightState.CopyFrom(flightState);
             _lastSentVesselId = vesselId;
-            _lastFlightStateSentAt = DateTime.UtcNow;
+            _lastFlightStateSentAt = now;
         }
 
         private static bool FlightStatesAreEquivalent(FlightCtrlState current, FlightCtrlState previous)

@@ -198,18 +198,49 @@ namespace LmpClient.Systems.VesselPositionSys
 
         private void InitializeOrbits()
         {
-            var lanFixFactor = GetLanFixFactor(GameTimeStamp, SubspaceId, Vessel, Body);
-            KspOrbit.SetOrbit(Orbit[0], Orbit[1], Orbit[2], Orbit[3] + lanFixFactor, Orbit[4], Orbit[5], CalculateEpochTime(Orbit[6]), Body);
+            var currentLanFixFactor = GetLanFixFactor(GameTimeStamp, SubspaceId, Vessel, Body);
+            KspOrbit.SetOrbit(
+                Orbit[0],
+                Orbit[1],
+                Orbit[2],
+                Orbit[3] + currentLanFixFactor,
+                Orbit[4],
+                Orbit[5],
+                CalculateEpochTime(Orbit[6]),
+                Body);
 
-            lanFixFactor = GetLanFixFactor(Target.GameTimeStamp, Target.SubspaceId, Vessel, Target.Body);
-            Target.KspOrbit.SetOrbit(Target.Orbit[0], Target.Orbit[1], Target.Orbit[2], Target.Orbit[3] + lanFixFactor, Target.Orbit[4], Target.Orbit[5],
-                CalculateTargetEpochTime(Target.Orbit[6]), Target.Body);
+            var targetLanFixFactor = GetLanFixFactor(Target.GameTimeStamp, Target.SubspaceId, Vessel, Target.Body);
+            Target.KspOrbit.SetOrbit(
+                Target.Orbit[0],
+                Target.Orbit[1],
+                Target.Orbit[2],
+                Target.Orbit[3] + targetLanFixFactor,
+                Target.Orbit[4],
+                Target.Orbit[5],
+                CalculateTargetEpochTime(Target.Orbit[6]),
+                Target.Body);
 
-            var meanAnomalyFixFactor = GetMeanAnomalyFixFactor(GameTimeStamp, SubspaceId, Vessel, KspOrbit);
-            KspOrbit.SetOrbit(Orbit[0], Orbit[1], Orbit[2], Orbit[3] + lanFixFactor, Orbit[4], Orbit[5] + meanAnomalyFixFactor, Orbit[6], Body);
+            var currentMeanAnomalyFixFactor = GetMeanAnomalyFixFactor(GameTimeStamp, SubspaceId, Vessel, KspOrbit);
+            KspOrbit.SetOrbit(
+                Orbit[0],
+                Orbit[1],
+                Orbit[2],
+                Orbit[3] + currentLanFixFactor,
+                Orbit[4],
+                Orbit[5] + currentMeanAnomalyFixFactor,
+                Orbit[6],
+                Body);
 
-            meanAnomalyFixFactor = GetMeanAnomalyFixFactor(Target.GameTimeStamp, Target.SubspaceId, Vessel, Target.KspOrbit);
-            Target.KspOrbit.SetOrbit(Target.Orbit[0], Target.Orbit[1], Target.Orbit[2], Target.Orbit[3] + lanFixFactor, Target.Orbit[4], Target.Orbit[5] + meanAnomalyFixFactor, Target.Orbit[6], Target.Body);
+            var targetMeanAnomalyFixFactor = GetMeanAnomalyFixFactor(Target.GameTimeStamp, Target.SubspaceId, Vessel, Target.KspOrbit);
+            Target.KspOrbit.SetOrbit(
+                Target.Orbit[0],
+                Target.Orbit[1],
+                Target.Orbit[2],
+                Target.Orbit[3] + targetLanFixFactor,
+                Target.Orbit[4],
+                Target.Orbit[5] + targetMeanAnomalyFixFactor,
+                Target.Orbit[6],
+                Target.Body);
         }
 
         private double CalculateTargetEpochTime(double targetEpoch)
@@ -382,14 +413,10 @@ namespace LmpClient.Systems.VesselPositionSys
 
         private static CelestialBody GetBody(int bodyIndex)
         {
-            try
-            {
-                return FlightGlobals.Bodies[bodyIndex];
-            }
-            catch (Exception)
-            {
+            if (FlightGlobals.Bodies == null || bodyIndex < 0 || bodyIndex >= FlightGlobals.Bodies.Count)
                 return null;
-            }
+
+            return FlightGlobals.Bodies[bodyIndex];
         }
 
         #endregion

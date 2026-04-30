@@ -22,6 +22,9 @@ namespace LmpClient.Base
 
         public virtual void EnqueueMessage(IServerMessageBase msg)
         {
+            if (msg == null)
+                return;
+
             if (ProcessMessagesInUnityThread)
             {
                 MessageHandler.IncomingMessages.Enqueue(msg);
@@ -36,7 +39,7 @@ namespace LmpClient.Base
         {
             base.OnDisabled();
 
-            //Clear the message queue on disabling
+            // Clear the message queue on disabling.
             if (ProcessMessagesInUnityThread)
                 MessageHandler.IncomingMessages = new ConcurrentQueue<IServerMessageBase>();
         }
@@ -45,14 +48,14 @@ namespace LmpClient.Base
         {
             base.OnEnabled();
 
-            //During the update we receive and handle all received messages. 
-            //We won't process them until the system is turned ENABLED
+            // During the update we receive and handle all received messages.
+            // We won't process them until the system is turned ENABLED.
             if (ProcessMessagesInUnityThread)
                 SetupRoutine(new RoutineDefinition(0, RoutineExecution.Update, ReadAndHandleAllReceivedMessages));
         }
 
         /// <summary>
-        /// Reads all the message queue and calls the handling sub-system
+        /// Reads all the message queue and calls the handling sub-system.
         /// </summary>
         private void ReadAndHandleAllReceivedMessages()
         {
@@ -70,12 +73,14 @@ namespace LmpClient.Base
             }
             catch (Exception e)
             {
-                LunaLog.LogError($"Error handling message type {msg.Data.GetType()}. Details: {e}");
-                NetworkConnection.Disconnect($"Error handling message type {msg.Data.GetType()}. Details: {e}");
+                var messageType = msg?.Data?.GetType().ToString() ?? "unknown";
+
+                LunaLog.LogError($"Error handling message type {messageType}. Details: {e}");
+                NetworkConnection.Disconnect($"Error handling message type {messageType}. Details: {e}");
             }
             finally
             {
-                msg.Recycle();
+                msg?.Recycle();
             }
         }
     }

@@ -1,5 +1,6 @@
 ﻿using Lidgren.Network;
 using LmpCommon.Message.Types;
+using System;
 
 namespace LmpCommon.Message.Data.Vessel
 {
@@ -20,7 +21,17 @@ namespace LmpCommon.Message.Data.Vessel
             base.InternalSerialize(lidgrenMsg);
 
             lidgrenMsg.Write(ForceReload);
+
+            if (Data == null)
+            {
+                NumBytes = 0;
+                Data = new byte[0];
+            }
+
             Common.ThreadSafeCompress(this, ref Data, ref NumBytes);
+
+            if (NumBytes < 0 || NumBytes > Data.Length)
+                throw new InvalidOperationException("Invalid vessel proto data length after compression.");
 
             lidgrenMsg.Write(NumBytes);
             lidgrenMsg.Write(Data, 0, NumBytes);
@@ -33,7 +44,10 @@ namespace LmpCommon.Message.Data.Vessel
             ForceReload = lidgrenMsg.ReadBoolean();
 
             NumBytes = lidgrenMsg.ReadInt32();
-            if (Data.Length < NumBytes)
+            if (NumBytes < 0)
+                throw new InvalidOperationException("Invalid vessel proto data length received.");
+
+            if (Data == null || Data.Length < NumBytes)
                 Data = new byte[NumBytes];
 
             lidgrenMsg.ReadBytes(Data, 0, NumBytes);
@@ -43,7 +57,10 @@ namespace LmpCommon.Message.Data.Vessel
 
         internal override int InternalGetMessageSize()
         {
-            return base.InternalGetMessageSize() + sizeof(bool) + sizeof(int) + sizeof(byte) * NumBytes;
+            return base.InternalGetMessageSize()
+                   + sizeof(bool)
+                   + sizeof(int)
+                   + sizeof(byte) * Math.Max(NumBytes, 0);
         }
     }
 }

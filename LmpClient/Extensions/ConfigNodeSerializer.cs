@@ -1,7 +1,6 @@
 ﻿using System;
 using System.Collections.Generic;
 using System.IO;
-using System.Linq;
 using System.Reflection;
 
 namespace LmpClient.Extensions
@@ -10,61 +9,92 @@ namespace LmpClient.Extensions
     {
         static ConfigNodeSerializer()
         {
-            //Create the delegates
             var configNodeType = typeof(ConfigNode);
 
-            var writeNodeMethodInfo = configNodeType.GetMethod("WriteNode", BindingFlags.NonPublic | BindingFlags.Instance);
-            if (writeNodeMethodInfo == null) return;
+            var writeNodeMethodInfo = configNodeType.GetMethod(
+                "WriteNode",
+                BindingFlags.NonPublic | BindingFlags.Instance);
 
-            //pass null for instance so we only do the slower reflection part once ever, then provide the instance at runtime
-            WriteNodeThunk = (WriteNodeDelegate)Delegate.CreateDelegate(typeof(WriteNodeDelegate), null, writeNodeMethodInfo);
+            if (writeNodeMethodInfo != null)
+            {
+                WriteNodeThunk = (WriteNodeDelegate)Delegate.CreateDelegate(
+                    typeof(WriteNodeDelegate),
+                    null,
+                    writeNodeMethodInfo);
+            }
 
-            //these ones really are static and won't have a instance first parameter 
-            var preFormatConfigMethodInfo = configNodeType.GetMethod("PreFormatConfig", BindingFlags.NonPublic | BindingFlags.Static);
-            if (preFormatConfigMethodInfo == null) return;
+            var preFormatConfigMethodInfo = configNodeType.GetMethod(
+                "PreFormatConfig",
+                BindingFlags.NonPublic | BindingFlags.Static);
 
-            PreFormatConfigThunk = (PreFormatConfigDelegate)Delegate.CreateDelegate(typeof(PreFormatConfigDelegate), null, preFormatConfigMethodInfo);
+            if (preFormatConfigMethodInfo != null)
+            {
+                PreFormatConfigThunk = (PreFormatConfigDelegate)Delegate.CreateDelegate(
+                    typeof(PreFormatConfigDelegate),
+                    null,
+                    preFormatConfigMethodInfo);
+            }
 
-            var recurseFormatMethodInfo = configNodeType.GetMethod("RecurseFormat",
-                BindingFlags.NonPublic | BindingFlags.Static, null, new[] { typeof(List<string[]>) }, null);
-            if (recurseFormatMethodInfo == null) return;
+            var recurseFormatMethodInfo = configNodeType.GetMethod(
+                "RecurseFormat",
+                BindingFlags.NonPublic | BindingFlags.Static,
+                null,
+                new[] { typeof(List<string[]>) },
+                null);
 
-            RecurseFormatThunk = (RecurseFormatDelegate)Delegate.CreateDelegate(typeof(RecurseFormatDelegate), null, recurseFormatMethodInfo);
+            if (recurseFormatMethodInfo != null)
+            {
+                RecurseFormatThunk = (RecurseFormatDelegate)Delegate.CreateDelegate(
+                    typeof(RecurseFormatDelegate),
+                    null,
+                    recurseFormatMethodInfo);
+            }
         }
 
         private static WriteNodeDelegate WriteNodeThunk { get; }
         private static PreFormatConfigDelegate PreFormatConfigThunk { get; }
         private static RecurseFormatDelegate RecurseFormatThunk { get; }
 
+        private static bool IsReady =>
+            WriteNodeThunk != null &&
+            PreFormatConfigThunk != null &&
+            RecurseFormatThunk != null;
+
         public static byte[] Serialize(this ConfigNode node)
         {
-            if (node == null) throw new ArgumentNullException(nameof(node));
+            if (node == null)
+                throw new ArgumentNullException(nameof(node));
 
-            //Call the insides of what ConfigNode would have called if we said Save(filename)
+            EnsureInitialized();
+
             using (var stream = new MemoryStream())
             using (var writer = new StreamWriter(stream))
             {
-                //we late bind to the instance by passing the instance as the first argument
                 WriteNodeThunk(node, writer);
+                writer.Flush();
                 return stream.ToArray();
             }
         }
 
-        /// <summary>
-        /// Use this method to serialize to a given array and avoid generating garbage (if you pool the array given as parameter)
-        /// </summary>
         public static void SerializeToArray(this ConfigNode node, byte[] data, out int numBytes)
         {
+            numBytes = 0;
+
             try
             {
-                if (node == null) throw new ArgumentNullException(nameof(node));
+                if (node == null)
+                    throw new ArgumentNullException(nameof(node));
 
-                //Call the insides of what ConfigNode would have called if we said Save(filename)
+                if (data == null || data.Length == 0)
+                    throw new ArgumentException("Output buffer is null or empty.", nameof(data));
+
+                EnsureInitialized();
+
                 using (var stream = new MemoryStream(data))
                 using (var writer = new StreamWriter(stream))
                 {
-                    //we late bind to the instance by passing the instance as the first argument
                     WriteNodeThunk(node, writer);
+                    writer.Flush();
                     numBytes = (int)stream.Position;
                 }
             }
@@ -77,7 +107,10 @@ namespace LmpClient.Extensions
 
         public static ConfigNode DeserializeToConfigNode(this byte[] data, int numBytes)
         {
-            if (data == null || data.Length == 0 || data.All(b => b == 0)) return null;
+            if (data == null || numBytes <= 0 || numBytes > data.Length)
+                return null;
+
+            EnsureInitialized();
 
             using (var stream = new MemoryStream(data, 0, numBytes))
             using (var reader = new StreamReader(stream))
@@ -85,19 +118,28 @@ namespace LmpClient.Extensions
                 var lines = new List<string>();
 
                 while (!reader.EndOfStream)
-                    lines.Add(reader.ReadLine());
+                {
+                    var line = reader.ReadLine();
+                    if (line != null)
+                        lines.Add(line);
+                }
 
                 var cfg = PreFormatConfigThunk(lines.ToArray());
-                var node = RecurseFormatThunk(cfg);
+                return RecurseFormatThunk(cfg);
+            }
+        }
 
-                return node;
+        private static void EnsureInitialized()
+        {
+            if (!IsReady)
+            {
+                throw new InvalidOperationException(
+                    "ConfigNodeSerializer failed to initialize. KSP ConfigNode private methods were not found.");
             }
         }
 
         private delegate void WriteNodeDelegate(ConfigNode configNode, StreamWriter writer);
-
         private delegate List<string[]> PreFormatConfigDelegate(string[] cfgData);
-
         private delegate ConfigNode RecurseFormatDelegate(List<string[]> cfg);
     }
 }

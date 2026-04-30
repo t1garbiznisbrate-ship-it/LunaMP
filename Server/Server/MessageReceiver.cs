@@ -18,8 +18,7 @@ namespace Server.Server
     {
         #region Handlers
 
-        private static readonly Dictionary<ClientMessageType, ReaderBase> HandlerDictionary = new Dictionary
-            <ClientMessageType, ReaderBase>
+        private static readonly Dictionary<ClientMessageType, ReaderBase> HandlerDictionary = new Dictionary<ClientMessageType, ReaderBase>
         {
             [ClientMessageType.Admin] = new AdminMsgReader(),
             [ClientMessageType.Handshake] = new HandshakeMsgReader(),
@@ -46,40 +45,53 @@ namespace Server.Server
 
         public void ReceiveCallback(ClientStructure client, NetIncomingMessage msg)
         {
-            if (client == null || msg.LengthBytes <= 1) return;
+            if (client == null || msg.LengthBytes <= 1)
+                return;
 
             if (client.ConnectionStatus == ConnectionStatus.Connected)
                 client.LastReceiveTime = ServerContext.ServerClock.ElapsedMilliseconds;
 
             var message = DeserializeMessage(msg);
-            if (message == null) return;
-
-            LmpPluginHandler.FireOnMessageReceived(client, message);
-            //A plugin has handled this message and requested suppression of the default behavior
-            if (message.Handled) return;
-
-            if (message.VersionMismatch)
-            {
-                MessageQueuer.SendConnectionEnd(client, $"Version mismatch: Your version ({message.Data.MajorVersion}.{message.Data.MinorVersion}.{message.Data.BuildVersion}) " +
-                                                        $"does not match the server version: {LmpVersioning.CurrentVersion}.");
+            if (message == null)
                 return;
-            }
 
-            //Clients can only send HANDSHAKE until they are Authenticated.
-            if (!client.Authenticated && message.MessageType != ClientMessageType.Handshake)
-            {
-                MessageQueuer.SendConnectionEnd(client, $"You must authenticate before sending a {message.MessageType} message");
-                return;
-            }
-
-            //Handle the message
             try
             {
-                HandlerDictionary[message.MessageType].HandleMessage(client, message);
+                LmpPluginHandler.FireOnMessageReceived(client, message);
+
+                // A plugin has handled this message and requested suppression of the default behavior.
+                if (message.Handled)
+                    return;
+
+                if (message.VersionMismatch)
+                {
+                    MessageQueuer.SendConnectionEnd(client, $"Version mismatch: Your version ({message.Data.MajorVersion}.{message.Data.MinorVersion}.{message.Data.BuildVersion}) " +
+                                                            $"does not match the server version: {LmpVersioning.CurrentVersion}.");
+                    return;
+                }
+
+                // Clients can only send HANDSHAKE until they are authenticated.
+                if (!client.Authenticated && message.MessageType != ClientMessageType.Handshake)
+                {
+                    MessageQueuer.SendConnectionEnd(client, $"You must authenticate before sending a {message.MessageType} message");
+                    return;
+                }
+
+                if (!HandlerDictionary.TryGetValue(message.MessageType, out var handler))
+                {
+                    LunaLog.Error($"Unhandled client message type {message.MessageType} from {client.PlayerName}");
+                    return;
+                }
+
+                handler.HandleMessage(client, message);
             }
             catch (Exception e)
             {
                 LunaLog.Error($"Error handling a message from {client.PlayerName}! {e}");
+            }
+            finally
+            {
+                message.Recycle();
             }
         }
 

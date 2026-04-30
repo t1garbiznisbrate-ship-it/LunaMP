@@ -82,13 +82,13 @@ namespace Lidgren.Network
 			}
 
 			int num = 1;
-			if (m_configuration.m_duplicates > 0.0f && MWCRandom.Instance.NextSingle() < m_configuration.m_duplicates)
+			if (m_configuration.m_duplicates > 0.0f && MWCRandom.Instance.GetNextSingle() < m_configuration.m_duplicates)
 				num++;
 
 			float delay = 0;
 			for (int i = 0; i < num; i++)
 			{
-				delay = m_configuration.m_minimumOneWayLatency + (MWCRandom.Instance.NextSingle() * m_configuration.m_randomOneWayLatency);
+				delay = m_configuration.m_minimumOneWayLatency + (MWCRandom.Instance.GetNextSingle() * m_configuration.m_randomOneWayLatency);
 
 				// Enqueue delayed packet
 				DelayedPacket p = new DelayedPacket();

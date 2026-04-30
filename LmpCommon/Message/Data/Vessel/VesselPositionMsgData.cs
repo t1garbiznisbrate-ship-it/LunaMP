@@ -8,9 +8,10 @@ namespace LmpCommon.Message.Data.Vessel
     {
         /// <inheritdoc />
         internal VesselPositionMsgData() { }
+
         public override VesselMessageType VesselMessageType => VesselMessageType.Position;
 
-        //Avoid using reference types in this message as it can generate allocations and is sent VERY often.
+        // Avoid using reference types in this message as it can generate allocations and is sent VERY often.
         public string BodyName;
         public int BodyIndex;
         public int SubspaceId;
@@ -54,7 +55,7 @@ namespace LmpCommon.Message.Data.Vessel
             for (var i = 0; i < 8; i++)
                 lidgrenMsg.Write(Orbit[i]);
 
-            lidgrenMsg.Write(BodyName);
+            lidgrenMsg.Write(BodyName ?? string.Empty);
         }
 
         internal override void InternalDeserialize(NetIncomingMessage lidgrenMsg)
@@ -84,14 +85,21 @@ namespace LmpCommon.Message.Data.Vessel
             for (var i = 0; i < 8; i++)
                 Orbit[i] = lidgrenMsg.ReadDouble();
 
-            if (lidgrenMsg.Position < lidgrenMsg.LengthBits)
-                BodyName = lidgrenMsg.ReadString();
+            BodyName = lidgrenMsg.Position < lidgrenMsg.LengthBits
+                ? lidgrenMsg.ReadString()
+                : string.Empty;
         }
 
         internal override int InternalGetMessageSize()
         {
-            return base.InternalGetMessageSize() + BodyName.GetByteCount() + sizeof(int) * 2 + sizeof(float) * 2 + sizeof(bool) * 3 + sizeof(double) * 3 * 3 +
-                sizeof(float) * 4 * 1 + sizeof(double) * 8;
+            return base.InternalGetMessageSize()
+                   + (BodyName?.GetByteCount() ?? 0)
+                   + sizeof(int) * 2
+                   + sizeof(float) * 2
+                   + sizeof(bool) * 3
+                   + sizeof(double) * 3 * 3
+                   + sizeof(float) * 4
+                   + sizeof(double) * 8;
         }
     }
 }

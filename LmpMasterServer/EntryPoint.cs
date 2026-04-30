@@ -30,7 +30,7 @@ namespace LmpMasterServer
         {
             MasterServerPortMapper.UseUpnp = !args.Any(a => a.Contains("noupnp"));
             IsNightly = args.Any(a => a.Contains("nightly"));
-            if (Common.PlatformIsWindows())
+            if (OperatingSystem.IsWindows())
             {
                 ConsoleUtil.DisableConsoleQuickEdit();
 

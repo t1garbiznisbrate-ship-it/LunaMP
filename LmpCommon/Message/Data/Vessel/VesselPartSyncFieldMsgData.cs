@@ -38,8 +38,8 @@ namespace LmpCommon.Message.Data.Vessel
             base.InternalSerialize(lidgrenMsg);
 
             lidgrenMsg.Write(PartFlightId);
-            lidgrenMsg.Write(ModuleName);
-            lidgrenMsg.Write(FieldName);
+            lidgrenMsg.Write(ModuleName ?? string.Empty);
+            lidgrenMsg.Write(FieldName ?? string.Empty);
 
             lidgrenMsg.Write((byte)FieldType);
 
@@ -86,11 +86,11 @@ namespace LmpCommon.Message.Data.Vessel
                     break;
                 case PartSyncFieldType.Object:
                 case PartSyncFieldType.String:
-                    lidgrenMsg.Write(StrValue);
+                    lidgrenMsg.Write(StrValue ?? string.Empty);
                     break;
                 case PartSyncFieldType.Enum:
                     lidgrenMsg.Write(IntValue);
-                    lidgrenMsg.Write(StrValue);
+                    lidgrenMsg.Write(StrValue ?? string.Empty);
                     break;
                 default:
                     throw new ArgumentOutOfRangeException();
@@ -146,7 +146,7 @@ namespace LmpCommon.Message.Data.Vessel
                     break;
                 case PartSyncFieldType.Quaternion:
                     for (var i = 0; i < 4; i++)
-                        VectorValue[i] = lidgrenMsg.ReadFloat();
+                        QuaternionValue[i] = lidgrenMsg.ReadFloat();
                     break;
                 case PartSyncFieldType.Object:
                 case PartSyncFieldType.String:
@@ -163,7 +163,11 @@ namespace LmpCommon.Message.Data.Vessel
 
         internal override int InternalGetMessageSize()
         {
-            var msgSize = base.InternalGetMessageSize() + sizeof(uint) + ModuleName.GetByteCount() + FieldName.GetByteCount();
+            var msgSize = base.InternalGetMessageSize()
+                          + sizeof(uint)
+                          + (ModuleName?.GetByteCount() ?? 0)
+                          + (FieldName?.GetByteCount() ?? 0)
+                          + sizeof(byte);
 
             switch (FieldType)
             {
@@ -203,11 +207,12 @@ namespace LmpCommon.Message.Data.Vessel
                 case PartSyncFieldType.Quaternion:
                     msgSize += sizeof(float) * 4;
                     break;
+                case PartSyncFieldType.Object:
                 case PartSyncFieldType.String:
-                    msgSize += StrValue.GetByteCount();
+                    msgSize += StrValue?.GetByteCount() ?? 0;
                     break;
                 case PartSyncFieldType.Enum:
-                    msgSize += sizeof(int) + StrValue.GetByteCount();
+                    msgSize += sizeof(int) + (StrValue?.GetByteCount() ?? 0);
                     break;
                 default:
                     throw new ArgumentOutOfRangeException();

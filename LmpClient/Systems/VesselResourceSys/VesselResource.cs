@@ -23,7 +23,8 @@ namespace LmpClient.Systems.VesselResourceSys
         public void ProcessVesselResource()
         {
             var vessel = FlightGlobals.FindVessel(VesselId);
-            if (vessel == null) return;
+            if (vessel == null)
+                return;
 
             if (!VesselCommon.DoVesselChecks(vessel.id))
                 return;
@@ -33,7 +34,8 @@ namespace LmpClient.Systems.VesselResourceSys
 
         private void UpdateVesselFields(Vessel vessel)
         {
-            if (vessel.protoVessel == null) return;
+            if (vessel.protoVessel == null)
+                return;
 
             for (var i = 0; i < ResourcesCount; i++)
             {
@@ -44,26 +46,29 @@ namespace LmpClient.Systems.VesselResourceSys
                     continue;
                 }
 
-                var partSnapshot = vessel.protoVessel.GetProtoPart(Resources[i].PartFlightId);
+                var resourceInfo = Resources[i];
+                var resourceName = resourceInfo.ResourceName ?? string.Empty;
+
+                var partSnapshot = vessel.protoVessel.GetProtoPart(resourceInfo.PartFlightId);
                 if (partSnapshot == null)
                 {
                     LunaLog.LogWarning(
-                        $"[LMP]: Skipping ProtoPart resource write due to failure to match (vessel {VesselId}, part {Resources[i].PartFlightId}, resource '{Resources[i].ResourceName}', reason: proto part not found).");
+                        $"[LMP]: Skipping ProtoPart resource write due to failure to match (vessel {VesselId}, part {resourceInfo.PartFlightId}, resource '{resourceName}', reason: proto part not found).");
                     continue;
                 }
 
-                var resourceSnapshot = partSnapshot.FindResourceInProtoPart(Resources[i].ResourceName);
+                var resourceSnapshot = partSnapshot.FindResourceInProtoPart(resourceName);
                 if (resourceSnapshot == null)
                 {
                     LunaLog.LogWarning(
-                        $"[LMP]: Skipping ProtoPart resource write due to failure to match (vessel {VesselId}, part {Resources[i].PartFlightId}, resource '{Resources[i].ResourceName}', reason: proto resource not found).");
+                        $"[LMP]: Skipping ProtoPart resource write due to failure to match (vessel {VesselId}, part {resourceInfo.PartFlightId}, resource '{resourceName}', reason: proto resource not found).");
                     continue;
                 }
 
-                resourceSnapshot.amount = Resources[i].Amount;
-                resourceSnapshot.flowState = Resources[i].FlowState;
+                resourceSnapshot.amount = resourceInfo.Amount;
+                resourceSnapshot.flowState = resourceInfo.FlowState;
 
-                //Using "resourceSnapshot.resourceRef" sometimes returns null so we also try to get the resource from the part...
+                // Using "resourceSnapshot.resourceRef" sometimes returns null so we also try to get the resource from the part.
                 if (resourceSnapshot.resourceRef == null)
                 {
                     if (partSnapshot.partRef != null)
@@ -71,20 +76,20 @@ namespace LmpClient.Systems.VesselResourceSys
                         var foundResource = partSnapshot.partRef.FindResource(resourceSnapshot.resourceName);
                         if (foundResource != null)
                         {
-                            foundResource.amount = Resources[i].Amount;
-                            foundResource.flowState = Resources[i].FlowState;
+                            foundResource.amount = resourceInfo.Amount;
+                            foundResource.flowState = resourceInfo.FlowState;
                         }
                         else
                         {
                             LunaLog.LogWarning(
-                                $"[LMP]: Skipping ProtoPart resource write due to failure to match (vessel {VesselId}, part {Resources[i].PartFlightId}, resource '{resourceSnapshot.resourceName}', reason: live resource not found on part).");
+                                $"[LMP]: Skipping ProtoPart resource write due to failure to match (vessel {VesselId}, part {resourceInfo.PartFlightId}, resource '{resourceSnapshot.resourceName}', reason: live resource not found on part).");
                         }
                     }
                 }
                 else
                 {
-                    resourceSnapshot.resourceRef.amount = Resources[i].Amount;
-                    resourceSnapshot.resourceRef.flowState = Resources[i].FlowState;
+                    resourceSnapshot.resourceRef.amount = resourceInfo.Amount;
+                    resourceSnapshot.resourceRef.flowState = resourceInfo.FlowState;
                 }
             }
         }

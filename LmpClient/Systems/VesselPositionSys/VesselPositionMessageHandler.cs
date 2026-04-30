@@ -13,22 +13,21 @@ namespace LmpClient.Systems.VesselPositionSys
 
         public void HandleMessage(IServerMessageBase msg)
         {
-            if (!(msg.Data is VesselPositionMsgData msgData)) return;
+            if (!(msg.Data is VesselPositionMsgData msgData))
+                return;
 
             var vesselId = msgData.VesselId;
             if (!VesselCommon.DoVesselChecks(vesselId))
                 return;
 
-            if (!VesselPositionSystem.CurrentVesselUpdate.ContainsKey(vesselId))
+            if (VesselPositionSystem.CurrentVesselUpdate.TryAdd(vesselId, new VesselPositionUpdate(msgData)))
             {
-                VesselPositionSystem.CurrentVesselUpdate.TryAdd(vesselId, new VesselPositionUpdate(msgData));
                 VesselPositionSystem.TargetVesselUpdateQueue.TryAdd(vesselId, new PositionUpdateQueue());
+                return;
             }
-            else
-            {
-                VesselPositionSystem.TargetVesselUpdateQueue.TryGetValue(vesselId, out var queue);
-                queue?.Enqueue(msgData);
-            }
+
+            if (VesselPositionSystem.TargetVesselUpdateQueue.TryGetValue(vesselId, out var queue))
+                queue.Enqueue(msgData);
         }
     }
 }

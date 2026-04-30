@@ -10,13 +10,16 @@ namespace LmpClient.Systems.VesselProtoSys
         {
             value.GameTime = msgData.GameTime;
             value.VesselId = msgData.VesselId;
-            value.NumBytes = msgData.NumBytes;
+            value.NumBytes = Math.Max(msgData.NumBytes, 0);
             value.ForceReload = msgData.ForceReload;
 
-            if (value.RawData.Length < msgData.NumBytes)
-                value.RawData = new byte[msgData.NumBytes];
+            if (msgData.Data == null || msgData.Data.Length < value.NumBytes)
+                throw new InvalidOperationException("Cannot queue vessel proto with invalid raw data.");
 
-            Array.Copy(msgData.Data, value.RawData, msgData.NumBytes);
+            if (value.RawData == null || value.RawData.Length < value.NumBytes)
+                value.RawData = new byte[value.NumBytes];
+
+            Array.Copy(msgData.Data, value.RawData, value.NumBytes);
         }
     }
 }

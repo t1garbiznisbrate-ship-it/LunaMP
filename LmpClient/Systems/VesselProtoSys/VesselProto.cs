@@ -14,13 +14,15 @@ namespace LmpClient.Systems.VesselProtoSys
         public double GameTime;
         public bool ForceReload;
 
-        public Vessel LoadVessel()
-        {
-            return null;
-        }
-
         public ProtoVessel CreateProtoVessel()
         {
+            if (RawData == null || NumBytes <= 0 || NumBytes > RawData.Length)
+            {
+                LunaLog.LogError($"Received malformed vessel data from SERVER. Id {VesselId}");
+                VesselRemoveSystem.Singleton.KillVessel(VesselId, true, "Malformed vessel data");
+                return null;
+            }
+
             var configNode = RawData.DeserializeToConfigNode(NumBytes);
             if (configNode == null || configNode.VesselHasNaNPosition())
             {

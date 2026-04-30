@@ -1,5 +1,6 @@
 ﻿using Lidgren.Network;
 using LmpCommon.Message.Base;
+using System;
 
 namespace LmpCommon.Message.Data.Vessel
 {
@@ -16,6 +17,9 @@ namespace LmpCommon.Message.Data.Vessel
 
         public void CopyFrom(VesselResourceInfo resource)
         {
+            if (resource == null)
+                throw new ArgumentNullException(nameof(resource));
+
             PartFlightId = resource.PartFlightId;
             ResourceName = resource.ResourceName;
             Amount = resource.Amount;
@@ -25,7 +29,7 @@ namespace LmpCommon.Message.Data.Vessel
         public void Serialize(NetOutgoingMessage lidgrenMsg)
         {
             lidgrenMsg.Write(PartFlightId);
-            lidgrenMsg.Write(ResourceName);
+            lidgrenMsg.Write(ResourceName ?? string.Empty);
             lidgrenMsg.Write(Amount);
             lidgrenMsg.Write(FlowState);
         }
@@ -40,7 +44,10 @@ namespace LmpCommon.Message.Data.Vessel
 
         public int GetByteCount()
         {
-            return sizeof(uint) + ResourceName.GetByteCount() + sizeof(double) + sizeof(bool);
+            return sizeof(uint)
+                   + (ResourceName?.GetByteCount() ?? 0)
+                   + sizeof(double)
+                   + sizeof(bool);
         }
     }
 }

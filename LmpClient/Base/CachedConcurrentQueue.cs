@@ -39,12 +39,16 @@ namespace LmpClient.Base
 
         public virtual void Clear()
         {
-            while (!Queue.IsEmpty && Queue.TryDequeue(out _)) { }
+            while (Queue.TryDequeue(out var item))
+            {
+                Recycle(item);
+            }
         }
 
         public virtual void Recycle(T item)
         {
-            if (item != null) Cache.Add(item);
+            if (item != null)
+                Cache.Add(item);
         }
 
         protected abstract void AssignFromMessage(T value, TD msgData);

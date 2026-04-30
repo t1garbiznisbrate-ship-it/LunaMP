@@ -1,5 +1,6 @@
 ﻿using LmpClient.Base;
 using LmpCommon.Message.Data.Vessel;
+using System;
 
 namespace LmpClient.Systems.VesselResourceSys
 {
@@ -10,19 +11,23 @@ namespace LmpClient.Systems.VesselResourceSys
             value.GameTime = msgData.GameTime;
             value.VesselId = msgData.VesselId;
 
-            value.ResourcesCount = msgData.ResourcesCount;
-            if (value.Resources.Length < msgData.ResourcesCount)
-                value.Resources = new VesselResourceInfo[msgData.ResourcesCount];
+            value.ResourcesCount = Math.Max(msgData.ResourcesCount, 0);
 
-            for (var i = 0; i < msgData.ResourcesCount; i++)
+            if (value.Resources.Length < value.ResourcesCount)
+                value.Resources = new VesselResourceInfo[value.ResourcesCount];
+
+            for (var i = 0; i < value.ResourcesCount; i++)
             {
+                if (msgData.Resources[i] == null)
+                    throw new InvalidOperationException("Cannot queue a null vessel resource.");
+
                 if (value.Resources[i] == null)
                     value.Resources[i] = new VesselResourceInfo();
 
                 value.Resources[i].Amount = msgData.Resources[i].Amount;
                 value.Resources[i].FlowState = msgData.Resources[i].FlowState;
                 value.Resources[i].PartFlightId = msgData.Resources[i].PartFlightId;
-                value.Resources[i].ResourceName = msgData.Resources[i].ResourceName.Clone() as string;
+                value.Resources[i].ResourceName = msgData.Resources[i].ResourceName ?? string.Empty;
             }
         }
     }

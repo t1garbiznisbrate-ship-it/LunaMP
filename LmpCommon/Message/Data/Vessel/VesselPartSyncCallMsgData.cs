@@ -21,8 +21,8 @@ namespace LmpCommon.Message.Data.Vessel
             base.InternalSerialize(lidgrenMsg);
 
             lidgrenMsg.Write(PartFlightId);
-            lidgrenMsg.Write(ModuleName);
-            lidgrenMsg.Write(MethodName);
+            lidgrenMsg.Write(ModuleName ?? string.Empty);
+            lidgrenMsg.Write(MethodName ?? string.Empty);
         }
 
         internal override void InternalDeserialize(NetIncomingMessage lidgrenMsg)
@@ -36,7 +36,10 @@ namespace LmpCommon.Message.Data.Vessel
 
         internal override int InternalGetMessageSize()
         {
-            return base.InternalGetMessageSize() + sizeof(uint) + ModuleName.GetByteCount() + MethodName.GetByteCount();
+            return base.InternalGetMessageSize()
+                   + sizeof(uint)
+                   + (ModuleName?.GetByteCount() ?? 0)
+                   + (MethodName?.GetByteCount() ?? 0);
         }
     }
 }

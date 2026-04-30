@@ -37,14 +37,29 @@ namespace LmpCommon.Message.Client
         };
 
         public override ClientMessageType MessageType => ClientMessageType.Vessel;
+
         protected override int DefaultChannel => IsUnreliableMessage() ? 0 : 8;
-        public override NetDeliveryMethod NetDeliveryMethod => IsUnreliableMessage() ?
-            NetDeliveryMethod.UnreliableSequenced : NetDeliveryMethod.ReliableOrdered;
+
+        public override NetDeliveryMethod NetDeliveryMethod => IsUnreliableMessage()
+            ? NetDeliveryMethod.UnreliableSequenced
+            : NetDeliveryMethod.ReliableOrdered;
 
         private bool IsUnreliableMessage()
         {
-            return Data.SubType == (ushort)VesselMessageType.Position || Data.SubType == (ushort)VesselMessageType.Flightstate
-                   || Data.SubType == (ushort)VesselMessageType.Update || Data.SubType == (ushort)VesselMessageType.Resource;
+            if (Data == null)
+                return false;
+
+            switch ((VesselMessageType)Data.SubType)
+            {
+                case VesselMessageType.Position:
+                case VesselMessageType.Flightstate:
+                case VesselMessageType.Update:
+                case VesselMessageType.Resource:
+                    return true;
+
+                default:
+                    return false;
+            }
         }
     }
 }

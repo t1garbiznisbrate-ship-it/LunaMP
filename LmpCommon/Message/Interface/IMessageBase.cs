@@ -53,7 +53,7 @@ namespace LmpCommon.Message.Interface
         /// This method retrieves the message as a byte array with it's 8 byte header at the beginning
         /// </summary>
         /// <param name="lidgrenMsg">Lidgren message to serialize to</param>
-        /// <returns>Mesage as a byte array with it's header</returns>
+        /// <returns>Message as a byte array with it's header</returns>
         void Serialize(NetOutgoingMessage lidgrenMsg);
 
         /// <summary>

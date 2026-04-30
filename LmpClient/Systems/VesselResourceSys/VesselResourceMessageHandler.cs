@@ -13,21 +13,15 @@ namespace LmpClient.Systems.VesselResourceSys
 
         public void HandleMessage(IServerMessageBase msg)
         {
-            if (!(msg.Data is VesselResourceMsgData msgData)) return;
+            if (!(msg.Data is VesselResourceMsgData msgData))
+                return;
 
-            //We received a msg for our own controlled/updated vessel so ignore it
+            // We received a message for our own controlled/updated vessel, so ignore it.
             if (!VesselCommon.DoVesselChecks(msgData.VesselId))
                 return;
 
-            if (!System.VesselResources.ContainsKey(msgData.VesselId))
-            {
-                System.VesselResources.TryAdd(msgData.VesselId, new VesselResourceQueue());
-            }
-
-            if (System.VesselResources.TryGetValue(msgData.VesselId, out var queue))
-            {
-                queue.Enqueue(msgData);
-            }
+            var queue = System.VesselResources.GetOrAdd(msgData.VesselId, _ => new VesselResourceQueue());
+            queue.Enqueue(msgData);
         }
     }
 }

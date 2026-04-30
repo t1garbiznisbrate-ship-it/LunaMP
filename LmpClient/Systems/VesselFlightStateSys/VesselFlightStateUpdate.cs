@@ -79,7 +79,6 @@ namespace LmpClient.Systems.VesselFlightStateSys
 
         #endregion
 
-
         #region Main method
 
         /// <summary>
@@ -89,15 +88,17 @@ namespace LmpClient.Systems.VesselFlightStateSys
         {
             if (!VesselCommon.IsSpectating && FlightGlobals.ActiveVessel && FlightGlobals.ActiveVessel.id == VesselId)
             {
-                //Do not apply flight states updates to our OWN controlled vessel
+                // Do not apply flight states updates to our OWN controlled vessel
                 return FlightGlobals.ActiveVessel.ctrlState;
             }
 
-            if (InterpolationFinished && VesselFlightStateSystem.TargetFlightStateQueue.TryGetValue(VesselId, out var queue) && queue.TryDequeue(out var targetUpdate))
+            if (InterpolationFinished &&
+                VesselFlightStateSystem.TargetFlightStateQueue.TryGetValue(VesselId, out var queue) &&
+                queue.TryDequeue(out var targetUpdate))
             {
                 if (Target == null)
                 {
-                    //This is the case of first iteration
+                    // This is the case of first iteration
                     GameTimeStamp = targetUpdate.GameTimeStamp - TimeSpan.FromMilliseconds(SettingsSystem.ServerSettings.SecondaryVesselUpdatesMsInterval).TotalSeconds;
 
                     CopyFrom(FlightGlobals.FindVessel(VesselId));
@@ -115,7 +116,7 @@ namespace LmpClient.Systems.VesselFlightStateSys
                 if (Target != null)
                 {
                     Target.CopyFrom(targetUpdate);
-                    VesselFlightStateSystem.TargetFlightStateQueue[VesselId].Recycle(targetUpdate);
+                    queue.Recycle(targetUpdate);
                 }
                 else
                 {
@@ -127,17 +128,23 @@ namespace LmpClient.Systems.VesselFlightStateSys
                 //UpdateProtoVesselValues();
             }
 
-            if (Target == null) return InterpolatedCtrlState;
+            if (Target == null)
+                return InterpolatedCtrlState;
 
             InterpolatedCtrlState.Lerp(CtrlState, Target.CtrlState, LerpPercentage);
-            LerpPercentage += (float)(Time.fixedDeltaTime / InterpolationDuration);
+
+            var interpolationDuration = InterpolationDuration;
+            if (interpolationDuration <= 0)
+                LerpPercentage = 1;
+            else
+                LerpPercentage += (float)(Time.fixedDeltaTime / interpolationDuration);
 
             return InterpolatedCtrlState;
         }
 
         /// <summary>
         /// This method adjust the extra interpolation duration in case we are lagging or too advanced.
-        /// The idea is that we replay the message at the correct time that is GameTimeWhenMEssageWasSent+InterpolationOffset
+        /// The idea is that we replay the message at the correct time that is GameTimeWhenMessageWasSent+InterpolationOffset
         /// In order to adjust we increase or decrease the interpolation duration so next packet matches the time more perfectly
         /// </summary>
         public void AdjustExtraInterpolationTimes()
@@ -200,7 +207,7 @@ namespace LmpClient.Systems.VesselFlightStateSys
         {
             //The minimum fix factor is Time.fixedDeltaTime. Usually 0.02 seconds
 
-            var errorInSeconds = Math.Abs(Math.Abs(TimeDifference));
+            var errorInSeconds = Math.Abs(TimeDifference);
             var errorInFrames = errorInSeconds / Time.fixedDeltaTime;
 
             //We cannot fix errors that are below the fixed delta time!

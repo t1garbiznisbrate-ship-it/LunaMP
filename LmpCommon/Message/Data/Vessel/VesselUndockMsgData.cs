@@ -9,6 +9,7 @@ namespace LmpCommon.Message.Data.Vessel
     {
         /// <inheritdoc />
         internal VesselUndockMsgData() { }
+
         public override VesselMessageType VesselMessageType => VesselMessageType.Undock;
 
         public uint PartFlightId;
@@ -26,7 +27,7 @@ namespace LmpCommon.Message.Data.Vessel
 
             lidgrenMsg.Write(PartFlightId);
             GuidUtil.Serialize(NewVesselId, lidgrenMsg);
-            lidgrenMsg.Write(DockedInfoName);
+            lidgrenMsg.Write(DockedInfoName ?? string.Empty);
             lidgrenMsg.Write(DockedInfoRootPartUId);
             lidgrenMsg.Write(DockedInfoVesselType);
         }
@@ -44,7 +45,11 @@ namespace LmpCommon.Message.Data.Vessel
 
         internal override int InternalGetMessageSize()
         {
-            return base.InternalGetMessageSize() + sizeof(uint) * 2 + sizeof(int) + GuidUtil.ByteSize + DockedInfoName.GetByteCount();
+            return base.InternalGetMessageSize()
+                   + sizeof(uint) * 2
+                   + sizeof(int)
+                   + GuidUtil.ByteSize
+                   + (DockedInfoName?.GetByteCount() ?? 0);
         }
     }
 }

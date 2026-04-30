@@ -30,6 +30,12 @@ namespace LmpClient.Systems.VesselResourceSys
         protected override void OnDisabled()
         {
             base.OnDisabled();
+
+            foreach (var keyVal in VesselResources)
+            {
+                keyVal.Value.Clear();
+            }
+
             VesselResources.Clear();
         }
 
@@ -69,7 +75,10 @@ namespace LmpClient.Systems.VesselResourceSys
         /// </summary>
         public void RemoveVessel(Guid vesselId)
         {
-            VesselResources.TryRemove(vesselId, out _);
+            if (VesselResources.TryRemove(vesselId, out var queue))
+            {
+                queue.Clear();
+            }
         }
 
         #endregion

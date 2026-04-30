@@ -2,6 +2,7 @@
 using Server.Events;
 using Server.Log;
 using Server.Settings.Structures;
+using System;
 using System.Threading;
 using System.Threading.Tasks;
 
@@ -9,14 +10,14 @@ namespace Server.System
 {
     public class BackupSystem
     {
-        //Subscribe to the exit event so a backup is performed when closing the server
+        // Subscribe to the exit event so a backup is performed when closing the server.
         static BackupSystem() => ExitEvent.ServerClosing += RunBackup;
 
         private static readonly object LockObj = new object();
 
         public static async Task PerformBackupsAsync(CancellationToken token)
         {
-            while (ServerContext.ServerRunning)
+            while (ServerContext.ServerRunning && !token.IsCancellationRequested)
             {
                 if (ServerContext.PlayerCount > 0)
                 {
@@ -39,11 +40,25 @@ namespace Server.System
             lock (LockObj)
             {
                 LunaLog.Debug("Performing backups...");
-                VesselStoreSystem.BackupVessels();
-                WarpSystem.BackupSubspaces();
-                TimeSystem.BackupStartTime();
-                ScenarioStoreSystem.BackupScenarios();
+
+                TryRunBackupStep("vessels", VesselStoreSystem.BackupVessels);
+                TryRunBackupStep("subspaces", WarpSystem.BackupSubspaces);
+                TryRunBackupStep("start time", TimeSystem.BackupStartTime);
+                TryRunBackupStep("scenarios", ScenarioStoreSystem.BackupScenarios);
+
                 LunaLog.Debug("Backups done");
+            }
+        }
+
+        private static void TryRunBackupStep(string name, Action backupAction)
+        {
+            try
+            {
+                backupAction();
+            }
+            catch (Exception e)
+            {
+                LunaLog.Error($"Error backing up {name}: {e}");
             }
         }
     }

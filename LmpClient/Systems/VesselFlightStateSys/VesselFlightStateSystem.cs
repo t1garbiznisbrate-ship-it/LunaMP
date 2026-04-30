@@ -114,13 +114,18 @@ namespace LmpClient.Systems.VesselFlightStateSys
                 {
                     try
                     {
-                        vessel.OnFlyByWire -= FlyByWireDictionary[keyVal.Key];
+                        vessel.OnFlyByWire -= keyVal.Value;
                     }
                     catch (Exception)
                     {
                         // ignored
                     }
                 }
+            }
+
+            foreach (var keyVal in TargetFlightStateQueue)
+            {
+                keyVal.Value.Clear();
             }
 
             FlyByWireDictionary.Clear();
@@ -160,10 +165,10 @@ namespace LmpClient.Systems.VesselFlightStateSys
             if (!VesselCommon.IsSpectating && FlightGlobals.ActiveVessel == vessel)
                 return;
 
-            FlyByWireDictionary.TryAdd(vessel.id, st => LunaOnVesselFlyByWire(vessel.id, st));
+            var callback = FlyByWireDictionary.GetOrAdd(vessel.id, _ => st => LunaOnVesselFlyByWire(vessel.id, st));
 
             if (vessel.OnFlyByWire.GetInvocationList().All(d => d.Method.Name != nameof(LunaOnVesselFlyByWire)))
-                vessel.OnFlyByWire += FlyByWireDictionary[vessel.id];
+                vessel.OnFlyByWire += callback;
         }
 
         /// <summary>
@@ -173,7 +178,9 @@ namespace LmpClient.Systems.VesselFlightStateSys
         {
             FlyByWireDictionary.TryRemove(vesselId, out _);
             CurrentFlightState.TryRemove(vesselId, out _);
-            TargetFlightStateQueue.TryRemove(vesselId, out _);
+
+            if (TargetFlightStateQueue.TryRemove(vesselId, out var queue))
+                queue.Clear();
 
             var vessel = FlightGlobals.FindVessel(vesselId);
             if (vessel != null)
@@ -191,7 +198,9 @@ namespace LmpClient.Systems.VesselFlightStateSys
 
             FlyByWireDictionary.TryRemove(vesselToRemove.id, out _);
             CurrentFlightState.TryRemove(vesselToRemove.id, out _);
-            TargetFlightStateQueue.TryRemove(vesselToRemove.id, out _);
+
+            if (TargetFlightStateQueue.TryRemove(vesselToRemove.id, out var queue))
+                queue.Clear();
         }
 
         /// <summary>
@@ -208,7 +217,10 @@ namespace LmpClient.Systems.VesselFlightStateSys
             foreach (var keyVal in TargetFlightStateQueue)
             {
                 while (keyVal.Value.TryPeek(out var targetFlightState) && FlightStateUpdateIsTooOld(targetFlightState))
-                    keyVal.Value.TryDequeue(out _);
+                {
+                    if (keyVal.Value.TryDequeue(out var dequeuedState))
+                        keyVal.Value.Recycle(dequeuedState);
+                }
             }
         }
 
@@ -262,8 +274,11 @@ namespace LmpClient.Systems.VesselFlightStateSys
 
         private void TryRemoveCallback(Vessel vesselToRemove)
         {
-            if (FlyByWireDictionary.ContainsKey(vesselToRemove.id) && vesselToRemove.OnFlyByWire.GetInvocationList().Any(d => d.Method.Name == nameof(LunaOnVesselFlyByWire)))
-                vesselToRemove.OnFlyByWire -= FlyByWireDictionary[vesselToRemove.id];
+            if (FlyByWireDictionary.TryGetValue(vesselToRemove.id, out var callback) &&
+                vesselToRemove.OnFlyByWire.GetInvocationList().Any(d => d.Method.Name == nameof(LunaOnVesselFlyByWire)))
+            {
+                vesselToRemove.OnFlyByWire -= callback;
+            }
         }
 
         #endregion

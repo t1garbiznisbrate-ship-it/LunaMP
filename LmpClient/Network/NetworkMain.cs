@@ -76,6 +76,11 @@ namespace LmpClient.Network
 
         public static void ResetConnectionStaticsAndQueues()
         {
+            while (NetworkSender.OutgoingMessages.TryDequeue(out var message))
+            {
+                message?.Recycle();
+            }
+
             NetworkSender.OutgoingMessages = new ConcurrentQueue<IMessageBase>();
         }
 
@@ -95,6 +100,7 @@ namespace LmpClient.Network
                 Config.LocalAddress = IPAddress.Any;
                 Config.DualStack = false;
             }
+
             ClientConnection = new NetClient(Config.Clone());
         }
 
@@ -103,7 +109,7 @@ namespace LmpClient.Network
             NetworkConnection.ResetRequested = true;
             BannedPartsResourcesWindow.Singleton.Display = false;
 
-            if (ClientConnection.Status > NetPeerStatus.NotRunning)
+            if (ClientConnection != null && ClientConnection.Status > NetPeerStatus.NotRunning)
             {
                 ClientConnection.Shutdown("Disconnected");
                 Thread.Sleep(1000);
@@ -111,6 +117,7 @@ namespace LmpClient.Network
 
             if (SendThread != null && !SendThread.IsCompleted)
                 SendThread.Wait(1000);
+
             if (ReceiveThread != null && !ReceiveThread.IsCompleted)
                 ReceiveThread.Wait(1000);
 

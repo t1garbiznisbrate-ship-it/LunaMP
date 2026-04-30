@@ -1,0 +1,31 @@
+  Determining projects to restore...
+  All projects are up-to-date for restore.
+  C:\Users\PC\source\repos\LunaMP\LmpClient\..\External\Dependencies\JsonFx.dll
+  C:\Users\PC\source\repos\LunaMP\LmpClient\..\External\Dependencies\System.Runtime.Serialization.dll
+  C:\Users\PC\source\repos\LunaMP\LmpClient\..\External\Dependencies\Harmony\000_Harmony\0Harmony.dll
+  C:\Users\PC\source\repos\LunaMP\LmpClient\..\External\Dependencies\Harmony\000_Harmony\HarmonyInstallChecker.dll
+  4 File(s) copied
+  LmpGlobal -> C:\Users\PC\source\repos\LunaMP\LmpGlobal\bin\Debug\net472\LmpGlobal.dll
+  LmpGlobal -> C:\Users\PC\source\repos\LunaMP\LmpGlobal\bin\Debug\netstandard2.0\LmpGlobal.dll
+  uhttpsharp -> C:\Users\PC\source\repos\LunaMP\uhttpsharp\bin\Debug\netstandard2.0\uhttpsharp.dll
+  Lidgren.Net -> C:\Users\PC\source\repos\LunaMP\Lidgren.Net\bin\Debug\netstandard2.0\Lidgren.Network.dll
+  Lidgren.Core -> C:\Users\PC\source\repos\LunaMP\Lidgren.Core\bin\Debug\net10.0\Lidgren.Core.dll
+  Lidgren.Net -> C:\Users\PC\source\repos\LunaMP\Lidgren.Net\bin\Debug\net472\Lidgren.Network.dll
+  LmpCommon -> C:\Users\PC\source\repos\LunaMP\LmpCommon\bin\Debug\net472\LmpCommon.dll
+  LmpUpdater -> C:\Users\PC\source\repos\LunaMP\LmpUpdater\bin\Debug\netstandard2.0\LmpUpdater.dll
+  LmpCommon -> C:\Users\PC\source\repos\LunaMP\LmpCommon\bin\Debug\netstandard2.0\LmpCommon.dll
+  LmpCommon -> C:\Users\PC\source\repos\LunaMP\LmpCommon\bin\Debug\net10.0\LmpCommon.dll
+  LmpClient -> C:\Users\PC\source\repos\LunaMP\LmpClient\bin\Debug\LmpClient.dll
+  KSPPATH not set in SetDirectories.bat ╬ô├ç├╢ skipping KSP install. 
+  LmpMasterServer -> C:\Users\PC\source\repos\LunaMP\LmpMasterServer\bin\Debug\net10.0\LmpMasterServer.dll
+  LmpCommonTest -> C:\Users\PC\source\repos\LunaMP\LmpCommonTest\bin\Debug\net10.0\LmpCommonTest.dll
+  Server -> C:\Users\PC\source\repos\LunaMP\Server\bin\Debug\net10.0\Server.dll
+  MasterServer -> C:\Users\PC\source\repos\LunaMP\MasterServer\bin\Debug\net10.0\MasterServer.dll
+  LmpMasterServerTest -> C:\Users\PC\source\repos\LunaMP\LmpMasterServerTest\bin\Debug\net10.0\LmpMasterServerTest.dll
+  ServerTest -> C:\Users\PC\source\repos\LunaMP\ServerTest\bin\Debug\net10.0\ServerTest.dll
+
+Build succeeded.
+    0 Warning(s)
+    0 Error(s)
+
+Time Elapsed 00:00:01.18

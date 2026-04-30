@@ -20,20 +20,27 @@ namespace LmpCommon.Message.Base
 
         internal static void RecycleMessage(IMessageBase message)
         {
-            if (!MessageDataDictionary.TryGetValue(message.Data.ClassName, out var dataBag))
-            {
-                dataBag = new ConcurrentBag<IMessageData>();
-                MessageDataDictionary.TryAdd(message.Data.ClassName, dataBag);
-            }
-            dataBag.Add(message.Data);
+            if (message == null)
+                return;
 
-            message.SetData(null);
+            if (message.Data != null)
+            {
+                if (!MessageDataDictionary.TryGetValue(message.Data.ClassName, out var dataBag))
+                {
+                    dataBag = new ConcurrentBag<IMessageData>();
+                    MessageDataDictionary.TryAdd(message.Data.ClassName, dataBag);
+                }
+
+                dataBag.Add(message.Data);
+                message.SetData(null);
+            }
 
             if (!MessageDictionary.TryGetValue(message.ClassName, out var messageBag))
             {
                 messageBag = new ConcurrentBag<IMessageBase>();
                 MessageDictionary.TryAdd(message.ClassName, messageBag);
             }
+
             messageBag.Add(message);
         }
 

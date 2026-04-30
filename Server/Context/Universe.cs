@@ -4,6 +4,7 @@ using Server.System;
 using System;
 using System.IO;
 using System.Linq;
+using System.Runtime.Versioning;
 
 namespace Server.Context
 {
@@ -26,6 +27,7 @@ namespace Server.Context
         /// <summary>
         /// Create universe directories
         /// </summary>
+        [SupportedOSPlatform("windows")]
         public static void CheckUniverse()
         {
             LunaLog.Debug($"Loading universe... {GetUniverseSize()}{ByteSize.KiloByteSymbol}");

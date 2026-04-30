@@ -87,21 +87,24 @@ namespace Lidgren.Network
 			return c_realUnitInt * NextInt32();
 		}
 
-		/// <summary>
-		/// Returns random value is greater or equal than 0.0f and less than 1.0f
-		/// </summary>
-		public float NextSingle()
-		{
-			var retval = (float)(c_realUnitInt * NextInt32());
-			if (retval == 1.0f)
-				return NextSingle();
-			return retval;
-		}
+        /// <summary>
+        /// Returns random value is greater or equal than 0.0f and less than 1.0f
+        /// </summary>
+        public float GetNextSingle()
+        {
+            float retval;
+            do
+            {
+                retval = (float)(c_realUnitInt * NextInt32());
+            } while (retval == 1.0f);
 
-		/// <summary>
-		/// Returns a random value is greater or equal than 0 and less than maxValue
-		/// </summary>
-		public override int Next(int maxValue)
+            return retval;
+        }
+
+        /// <summary>
+        /// Returns a random value is greater or equal than 0 and less than maxValue
+        /// </summary>
+        public override int Next(int maxValue)
 		{
 			return (int)(NextDouble() * maxValue);
 		}

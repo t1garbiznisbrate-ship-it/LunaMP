@@ -17,19 +17,20 @@ namespace LmpClient.Systems.VesselUpdateSys
 
         public void SendVesselUpdate(Vessel vessel)
         {
-            if (vessel == null) return;
+            if (vessel == null)
+                return;
 
             var msgData = NetworkMain.CliMsgFactory.CreateNewMessageData<VesselUpdateMsgData>();
             msgData.GameTime = TimeSyncSystem.UniversalTime;
             msgData.VesselId = vessel.id;
-            msgData.Name = vessel.vesselName;
+            msgData.Name = vessel.vesselName ?? string.Empty;
             msgData.Type = vessel.vesselType.ToString();
             msgData.DistanceTraveled = vessel.distanceTraveled;
 
             msgData.Situation = vessel.situation.ToString();
             msgData.Landed = vessel.Landed;
-            msgData.LandedAt = vessel.landedAt;
-            msgData.DisplayLandedAt = vessel.displaylandedAt;
+            msgData.LandedAt = vessel.landedAt ?? string.Empty;
+            msgData.DisplayLandedAt = vessel.displaylandedAt ?? string.Empty;
             msgData.Splashed = vessel.Splashed;
             msgData.MissionTime = vessel.missionTime;
             msgData.LaunchTime = vessel.launchTime;
@@ -38,7 +39,7 @@ namespace LmpClient.Systems.VesselUpdateSys
             msgData.RefTransformId = vessel.referenceTransformId;
 
             msgData.AutoClean = vessel.AutoClean;
-            msgData.AutoCleanReason = vessel.AutoCleanReason;
+            msgData.AutoCleanReason = vessel.AutoCleanReason ?? string.Empty;
             msgData.WasControllable = vessel.IsControllable;
             msgData.Stage = vessel.currentStage;
             msgData.Com[0] = vessel.localCoM.x;

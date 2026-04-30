@@ -4,6 +4,7 @@
     <OutputType>Library</OutputType>
     <GenerateAssemblyInfo>false</GenerateAssemblyInfo>
     <LangVersion>9</LangVersion>
+    <NoWarn>$(NoWarn);NU1701</NoWarn>
   </PropertyGroup>
   <ItemGroup>
     <ProjectReference Include="..\Lidgren.Core\Lidgren.Core.csproj" />
@@ -24,10 +25,8 @@
     <PackageReference Include="MaxMind.GeoIP2" Version="5.4.1" />
     <PackageReference Include="ProDotNetZip" Version="1.20.0" />
     <PackageReference Include="HtmlTextWriter" Version="2.1.1" />
-    <PackageReference Include="Microsoft.CSharp" Version="4.7.0" />
     <PackageReference Include="Microsoft.VisualStudio.Threading" Version="17.8.14" />
     <PackageReference Include="Microsoft.VisualStudio.Validation" Version="17.8.8" />
-    <PackageReference Include="Microsoft.Win32.Registry" Version="5.0.0" />
     <PackageReference Include="Newtonsoft.Json" Version="13.0.4" />
   </ItemGroup>
   <ItemGroup>

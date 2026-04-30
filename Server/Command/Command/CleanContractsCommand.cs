@@ -1,8 +1,9 @@
-using LunaConfigNode.CfgNode;
+﻿using LunaConfigNode.CfgNode;
 using Server.Command.Command.Base;
 using Server.Log;
 using Server.System;
 using Server.System.Scenario;
+using System;
 using System.Collections.Generic;
 using System.Linq;
 
@@ -16,10 +17,11 @@ namespace Server.Command.Command
     /// </summary>
     public class CleanContractsCommand : SimpleCommand
     {
-        private static readonly IReadOnlyCollection<string> FinishedContractStates = new HashSet<string>
-        {
-            "Completed", "Failed", "Cancelled", "DeadlineExpired", "Withdrawn"
-        };
+        private static readonly IReadOnlyCollection<string> FinishedContractStates =
+            new HashSet<string>(StringComparer.OrdinalIgnoreCase)
+            {
+                "Completed", "Failed", "Cancelled", "DeadlineExpired", "Withdrawn"
+            };
 
         public override bool Execute(string commandArgs)
         {
@@ -38,6 +40,7 @@ namespace Server.Command.Command
 
             var finishedNodeEntry = scenario.GetNode("CONTRACTS_FINISHED");
             ConfigNode finishedNode;
+
             if (finishedNodeEntry == null)
             {
                 finishedNode = new ConfigNode("") { Name = "CONTRACTS_FINISHED" };
@@ -49,8 +52,7 @@ namespace Server.Command.Command
                 finishedNode = finishedNodeEntry.Value;
             }
 
-            var activeContracts  = contractsNode.GetNodes("CONTRACT").Select(c => c.Value).ToArray();
-            var finishedContracts = finishedNode.GetNodes("CONTRACT").Select(c => c.Value).ToArray();
+            var activeContracts = contractsNode.GetNodes("CONTRACT").Select(c => c.Value).ToArray();
 
             var moved = 0;
             foreach (var contract in activeContracts)
@@ -64,13 +66,17 @@ namespace Server.Command.Command
 
                 contractsNode.RemoveNode(contract);
 
-                var existingInFinished = finishedContracts.FirstOrDefault(n => n.GetValue("guid")?.Value == guid);
+                var existingInFinished = finishedNode
+                    .GetNodes("CONTRACT")
+                    .Select(c => c.Value)
+                    .FirstOrDefault(n => n.GetValue("guid")?.Value == guid);
+
                 if (existingInFinished != null)
                     finishedNode.ReplaceNode(existingInFinished, contract);
                 else
                     finishedNode.AddNode(contract);
 
-                LunaLog.Normal($"[CleanContracts]: Moved {type} ({guid}) — state: {state}");
+                LunaLog.Normal($"[CleanContracts]: Moved {type} ({guid}) - state: {state}");
                 moved++;
             }
 

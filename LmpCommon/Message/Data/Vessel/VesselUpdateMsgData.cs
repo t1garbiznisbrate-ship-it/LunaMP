@@ -8,6 +8,7 @@ namespace LmpCommon.Message.Data.Vessel
     {
         /// <inheritdoc />
         internal VesselUpdateMsgData() { }
+
         public override VesselMessageType VesselMessageType => VesselMessageType.Update;
 
         public string Name;
@@ -36,33 +37,32 @@ namespace LmpCommon.Message.Data.Vessel
 
         public override string ClassName { get; } = nameof(VesselUpdateMsgData);
 
-
         internal override void InternalSerialize(NetOutgoingMessage lidgrenMsg)
         {
             base.InternalSerialize(lidgrenMsg);
 
-            lidgrenMsg.Write(Name);
-            lidgrenMsg.Write(Type);
+            lidgrenMsg.Write(Name ?? string.Empty);
+            lidgrenMsg.Write(Type ?? string.Empty);
             lidgrenMsg.Write(DistanceTraveled);
-            lidgrenMsg.Write(Situation);
+            lidgrenMsg.Write(Situation ?? string.Empty);
             lidgrenMsg.Write(Landed);
             lidgrenMsg.Write(Splashed);
             lidgrenMsg.Write(Persistent);
-            lidgrenMsg.Write(LandedAt);
-            lidgrenMsg.Write(DisplayLandedAt);
+            lidgrenMsg.Write(LandedAt ?? string.Empty);
+            lidgrenMsg.Write(DisplayLandedAt ?? string.Empty);
             lidgrenMsg.Write(MissionTime);
             lidgrenMsg.Write(LaunchTime);
             lidgrenMsg.Write(LastUt);
             lidgrenMsg.Write(RefTransformId);
             lidgrenMsg.Write(AutoClean);
-            lidgrenMsg.Write(AutoCleanReason);
+            lidgrenMsg.Write(AutoCleanReason ?? string.Empty);
             lidgrenMsg.Write(WasControllable);
             lidgrenMsg.Write(Stage);
 
             for (var i = 0; i < 3; i++)
                 lidgrenMsg.Write(Com[i]);
 
-            lidgrenMsg.Write(BodyName);
+            lidgrenMsg.Write(BodyName ?? string.Empty);
         }
 
         internal override void InternalDeserialize(NetIncomingMessage lidgrenMsg)
@@ -90,17 +90,26 @@ namespace LmpCommon.Message.Data.Vessel
             for (var i = 0; i < 3; i++)
                 Com[i] = lidgrenMsg.ReadFloat();
 
-            if (lidgrenMsg.Position < lidgrenMsg.LengthBits)
-                BodyName = lidgrenMsg.ReadString();
+            BodyName = lidgrenMsg.Position < lidgrenMsg.LengthBits
+                ? lidgrenMsg.ReadString()
+                : string.Empty;
         }
 
         internal override int InternalGetMessageSize()
         {
             return base.InternalGetMessageSize()
-                + sizeof(double) * 4 + sizeof(bool) * 5 + sizeof(uint) + sizeof(int) + sizeof(float) * 3 
-                + Name.GetByteCount() + Type.GetByteCount() + Situation.GetByteCount()
-                + LandedAt.GetByteCount() + DisplayLandedAt.GetByteCount() + AutoCleanReason.GetByteCount()
-                + BodyName.GetByteCount();
+                   + sizeof(double) * 4
+                   + sizeof(bool) * 5
+                   + sizeof(uint)
+                   + sizeof(int)
+                   + sizeof(float) * 3
+                   + (Name?.GetByteCount() ?? 0)
+                   + (Type?.GetByteCount() ?? 0)
+                   + (Situation?.GetByteCount() ?? 0)
+                   + (LandedAt?.GetByteCount() ?? 0)
+                   + (DisplayLandedAt?.GetByteCount() ?? 0)
+                   + (AutoCleanReason?.GetByteCount() ?? 0)
+                   + (BodyName?.GetByteCount() ?? 0);
         }
     }
 }

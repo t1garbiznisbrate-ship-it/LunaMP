@@ -14,11 +14,13 @@ using System.Drawing;
 using System.Drawing.Imaging;
 using System.IO;
 using System.Linq;
+using System.Runtime.Versioning;
 using System.Threading.Tasks;
 using Graphics = System.Drawing.Graphics;
 
 namespace Server.System
 {
+    [SupportedOSPlatform("windows")]
     public class ScreenshotSystem
     {
         private const string SmallFilePrefix = "small_";

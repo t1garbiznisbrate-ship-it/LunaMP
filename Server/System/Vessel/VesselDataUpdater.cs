@@ -25,11 +25,12 @@ namespace Server.System.Vessel
         #endregion
 
         /// <summary>
-        /// Sets ORBIT IDENT from the reference body name when provided (e.g. from position or update messages).
+        /// Sets ORBIT IDENT from the reference body name when provided, for example from position or update messages.
         /// </summary>
         internal static void ApplyOrbitIdent(Classes.Vessel vessel, string bodyName)
         {
-            if (string.IsNullOrEmpty(bodyName)) return;
+            if (vessel == null || string.IsNullOrEmpty(bodyName))
+                return;
 
             if (vessel.Orbit.Exists("IDENT"))
                 vessel.Orbit.Update("IDENT", bodyName);
@@ -38,26 +39,42 @@ namespace Server.System.Vessel
         }
 
         /// <summary>
-        /// Raw updates a vessel in the dictionary and takes care of the locking in case we received another vessel message type
+        /// Raw updates a vessel in the dictionary and takes care of the locking in case we received another vessel message type.
         /// </summary>
         public static void RawConfigNodeInsertOrUpdate(Guid vesselId, string vesselDataInConfigNodeFormat)
         {
+            if (vesselId == Guid.Empty || string.IsNullOrEmpty(vesselDataInConfigNodeFormat))
+                return;
+
             _ = Task.Run(() =>
             {
-                var vessel = new Classes.Vessel(vesselDataInConfigNodeFormat);
-                if (GeneralSettings.SettingsStore.ModControl)
+                try
                 {
-                    var vesselParts = vessel.Parts.GetAllValues().Select(p => p.Fields.GetSingle("name").Value);
-                    var bannedParts = vesselParts.Except(ModFileSystem.ModControl.AllowedParts);
-                    if (bannedParts.Any())
+                    var vessel = new Classes.Vessel(vesselDataInConfigNodeFormat);
+
+                    if (GeneralSettings.SettingsStore.ModControl)
                     {
-                        LunaLog.Warning($"Received a vessel with BANNED parts! {vesselId}");
-                        return;
+                        var vesselParts = vessel.Parts
+                            .GetAllValues()
+                            .Select(p => p.Fields.GetSingle("name")?.Value)
+                            .Where(p => !string.IsNullOrEmpty(p));
+
+                        var bannedParts = vesselParts.Except(ModFileSystem.ModControl.AllowedParts);
+                        if (bannedParts.Any())
+                        {
+                            LunaLog.Warning($"Received a vessel with BANNED parts! {vesselId}");
+                            return;
+                        }
+                    }
+
+                    lock (Semaphore.GetOrAdd(vesselId, _ => new object()))
+                    {
+                        VesselStoreSystem.CurrentVessels.AddOrUpdate(vesselId, vessel, (key, existingVal) => vessel);
                     }
                 }
-                lock (Semaphore.GetOrAdd(vesselId, new object()))
+                catch (Exception e)
                 {
-                    VesselStoreSystem.CurrentVessels.AddOrUpdate(vesselId, vessel, (key, existingVal) => vessel);
+                    LunaLog.Error($"Error inserting/updating raw vessel {vesselId}: {e}");
                 }
             });
         }

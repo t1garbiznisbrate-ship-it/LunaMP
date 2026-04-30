@@ -9,6 +9,7 @@ namespace LmpCommon.Message.Data.Vessel
     {
         /// <inheritdoc />
         internal VesselSyncMsgData() { }
+
         public override VesselMessageType VesselMessageType => VesselMessageType.Sync;
 
         public int VesselsCount;
@@ -20,8 +21,13 @@ namespace LmpCommon.Message.Data.Vessel
         {
             base.InternalSerialize(lidgrenMsg);
 
-            lidgrenMsg.Write(VesselsCount);
-            for (var i = 0; i < VesselsCount; i++)
+            var safeVesselsCount = VesselIds == null
+                ? 0
+                : Math.Min(VesselsCount, VesselIds.Length);
+
+            lidgrenMsg.Write(safeVesselsCount);
+
+            for (var i = 0; i < safeVesselsCount; i++)
             {
                 GuidUtil.Serialize(VesselIds[i], lidgrenMsg);
             }
@@ -32,7 +38,11 @@ namespace LmpCommon.Message.Data.Vessel
             base.InternalDeserialize(lidgrenMsg);
 
             VesselsCount = lidgrenMsg.ReadInt32();
-            if (VesselIds.Length < VesselsCount)
+
+            if (VesselsCount < 0)
+                VesselsCount = 0;
+
+            if (VesselIds == null || VesselIds.Length < VesselsCount)
                 VesselIds = new Guid[VesselsCount];
 
             for (var i = 0; i < VesselsCount; i++)
@@ -43,7 +53,13 @@ namespace LmpCommon.Message.Data.Vessel
 
         internal override int InternalGetMessageSize()
         {
-            return base.InternalGetMessageSize() + sizeof(int) + GuidUtil.ByteSize * VesselsCount;
+            var safeVesselsCount = VesselIds == null
+                ? 0
+                : Math.Min(VesselsCount, VesselIds.Length);
+
+            return base.InternalGetMessageSize()
+                   + sizeof(int)
+                   + GuidUtil.ByteSize * safeVesselsCount;
         }
     }
 }

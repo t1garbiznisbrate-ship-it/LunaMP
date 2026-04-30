@@ -21,7 +21,7 @@ namespace LmpCommon.Message.Data.Vessel
             base.InternalSerialize(lidgrenMsg);
 
             lidgrenMsg.Write(ActionGroup);
-            lidgrenMsg.Write(ActionGroupString);
+            lidgrenMsg.Write(ActionGroupString ?? string.Empty);
             lidgrenMsg.Write(Value);
         }
 
@@ -36,7 +36,10 @@ namespace LmpCommon.Message.Data.Vessel
 
         internal override int InternalGetMessageSize()
         {
-            return base.InternalGetMessageSize() + sizeof(int) + ActionGroupString.GetByteCount() + sizeof(bool);
+            return base.InternalGetMessageSize()
+                   + sizeof(int)
+                   + (ActionGroupString?.GetByteCount() ?? 0)
+                   + sizeof(bool);
         }
     }
 }
